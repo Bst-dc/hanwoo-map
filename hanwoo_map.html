@@ -83,6 +83,26 @@ h3,h2.lh{margin:0 0 8px;font-size:.95rem}
 .side{display:grid;gap:16px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 @media (max-width:1000px){.two{grid-template-columns:1fr}}
+/* 지도 카드와 오른쪽 칸 높이 맞추기
+   넓은 화면: 오른쪽 칸은 지도 카드 높이를 따르고(contain:size), 목록이 남는 높이를 채우며 안에서 스크롤.
+   상세 칸은 마우스를 올렸을 때의 높이를 미리 잡아 둬서 목록 높이가 흔들리지 않게 한다.
+   목록이 너무 낮아지지 않게 오른쪽 칸 최소 높이 = 상세 + 16 + 240 (이보다 지도가 낮으면 지도 카드가 늘어남) */
+@media (min-width:1001px){
+  .grid{align-items:stretch}
+  .side{contain:size;display:flex;flex-direction:column;gap:16px;min-height:608px}
+  .side:has(.detail.hw){min-height:746px}
+  .side .detail{flex:none}
+  .detail.hw{min-height:490px}
+  .two{flex:1;min-height:0;grid-auto-rows:minmax(0,1fr)}
+  .two .card{display:flex;flex-direction:column;min-height:0}
+  .two .bars{flex:1;min-height:0;max-height:none}
+}
+/* 중간 화면: 상세는 지도 옆(지도 높이로 늘림), 목록 두 개는 아래 전체 폭에 나란히 */
+@media (min-width:821px) and (max-width:1000px){
+  .grid{align-items:stretch}
+  .side{display:contents}
+  .two{grid-column:1/-1;grid-template-columns:1fr 1fr}
+}
 .note{font-size:.78rem;color:var(--muted);margin-top:18px;line-height:1.6}
 .empty{color:var(--muted);font-size:.9rem}
 .szl{display:flex;gap:14px;font-size:.75rem;color:var(--muted);margin:0 0 4px}
@@ -112,7 +132,7 @@ h3,h2.lh{margin:0 0 8px;font-size:.95rem}
     <div class="card">
       <div class="crumbbar" id="crumbs"></div>
       <svg id="map" role="img" aria-label="사육 농장 수 지도">
-        <g id="regions"></g><g id="emdLayer"></g><path class="prov" id="borders"></path><g id="labels"></g>
+        <g id="regions"></g><g id="emdLayer"></g><path class="prov" id="borders"></path><g id="labels"></g><g id="inset"></g>
       </svg>
       <div class="legend" id="legend"></div>
     </div>
@@ -148,6 +168,7 @@ feats.forEach(f => { f.code2 = f.id.slice(0, 2); });
 const byId = {}; feats.forEach(f => byId[f.id] = f);
 const sidoName = {}; feats.forEach(f => sidoName[f.code2] = f.sido);
 let metric = 'farm';        // farm: 농장 수 · head: 사육 두수 · avg: 농장당 두수
+let wantMetric = metric;    // 사용자가 마지막으로 고른 지표 (잠시 못 쓰는 층에서 바뀌어도 기억)
 const farmsOf = f => f.f[species] || 0;
 const headOf = f => species === '소' ? (f.h || 0) : 0;
 const isHW = () => metric === 'hw' || metric === 'hwavg';
@@ -183,8 +204,11 @@ const emdVal = (fm, h) => {
 function syncMetric() {
   const okH = !!DATA.hasHead && species === '소';
   const okW = !!DATA.hasHanwoo && species === '소' && view.level < 2;   // 한우 자료는 시군구 단위까지
-  if (isHW() && !okW) metric = okH ? 'head' : 'farm';
-  if ((metric === 'head' || metric === 'avg') && !okH) metric = 'farm';
+  // 사용자가 고른 지표(wantMetric)를 쓸 수 있으면 그것으로 되돌린다
+  // (시군구 안으로 들어가 한우 → 두수로 바뀌었다가, 다시 시도·전국으로 나오면 한우로 복귀)
+  const allowed = m => m === 'farm' || ((m === 'hw' || m === 'hwavg') ? okW : okH);
+  if (allowed(wantMetric)) metric = wantMetric;
+  else if (!allowed(metric)) metric = okH ? 'head' : 'farm';
   $('metricSeg').style.display = (DATA.hasHead || DATA.hasHanwoo) ? '' : 'none';
   document.querySelectorAll('#metricSeg button').forEach(b => {
     const m = b.dataset.m;
@@ -213,7 +237,7 @@ const spList = Object.entries(DATA.speciesTotal)
 $('sp').innerHTML = spList.map(([k, v]) => `<option value="${k}">${k} (${fmt(v)})</option>`).join('');
 $('sp').value = species;
 $('sp').addEventListener('change', e => { species = e.target.value; render(); });
-document.querySelectorAll('#metricSeg button').forEach(b => b.addEventListener('click', () => { metric = b.dataset.m; render(); }));
+document.querySelectorAll('#metricSeg button').forEach(b => b.addEventListener('click', () => { metric = wantMetric = b.dataset.m; render(); }));
 
 /* ---------- 시군구 그리기 ---------- */
 const regionsG = $('regions');
@@ -221,6 +245,7 @@ feats.forEach(f => {
   const p = document.createElementNS(NS, 'path');
   p.setAttribute('d', f.d);
   p.setAttribute('class', 'r can');
+  p.id = 'r' + f.id;
   p.addEventListener('mouseenter', () => { if (canUse(f)) showDetail(sigunguDetail(f)); });
   p.addEventListener('mousemove', ev => { if (canUse(f)) tip(ev, `<b>${f.name}</b> ${fv(val(f))}${TIPU()}`); });
   p.addEventListener('mouseleave', () => { tipOff(); showContext(); });
@@ -280,7 +305,43 @@ function sidoBox(code2) {
   const rest = items.filter(b => !main.includes(b) &&
     b.x >= pu.x && b.y >= pu.y && b.x + b.width <= pu.x + pu.w && b.y + b.height <= pu.y + pu.h);
   if (rest.length) u = union([...main, ...rest]);
-  return sidoBoxCache[code2] = pad(u, .07);
+  const box = pad(u, .07);
+  // 확대 범위 밖으로 빠진 섬은 오른쪽 위 작은 상자(삽입 지도)로 따로 보여 준다
+  sidoOut[code2] = feats.filter(f => f.code2 === code2).filter(f => {
+    const r = f.el.getBBox();
+    return r.x < box.x || r.y < box.y || r.x + r.width > box.x + box.w || r.y + r.height > box.y + box.h;
+  });
+  return sidoBoxCache[code2] = box;
+}
+const sidoOut = {};
+function drawInset() {
+  const g = $('inset'); g.innerHTML = '';
+  if (view.level !== 1) return;
+  const list = sidoOut[view.sido] || [];
+  const k = svg.clientWidth / box.w;                 // 화면 1px 당 지도 단위
+  if (!list.length || !k) return;
+  const m = 10 / k, fs = 11 / k;
+  let top = box.y + m;
+  list.forEach(f => {
+    const r = f.el.getBBox();
+    const s = Math.min(3, Math.max(1, box.w * .1 / r.width));
+    const w = r.width * s, h = r.height * s, x = box.x + box.w - m - w, y = top + fs * 1.6;
+    const frame = document.createElementNS(NS, 'rect');
+    Object.entries({x: x - m * .6, y: top, width: w + m * 1.2, height: h + fs * 1.6 + m * .6, rx: 4 / k, fill: 'none',
+      stroke: 'var(--prov)', 'stroke-width': 1, 'stroke-dasharray': '3 3', 'vector-effect': 'non-scaling-stroke'}).forEach(([a, v]) => frame.setAttribute(a, v));
+    const label = document.createElementNS(NS, 'text');
+    label.setAttribute('x', x + w / 2); label.setAttribute('y', top + fs * .9);
+    label.setAttribute('font-size', fs); label.setAttribute('stroke-width', 3 / k);
+    label.textContent = f.name;
+    const use = document.createElementNS(NS, 'use');
+    use.setAttribute('href', '#' + f.el.id);
+    use.setAttribute('transform', `translate(${x - r.x * s} ${y - r.y * s}) scale(${s})`);
+    use.style.cursor = 'pointer';
+    ['mouseenter', 'mousemove', 'mouseleave', 'click'].forEach(type =>
+      use.addEventListener(type, ev => f.el.dispatchEvent(new MouseEvent(type, ev))));
+    g.append(frame, label, use);
+    top += h + fs * 1.6 + m * 1.6;
+  });
 }
 function sgBox(f) { const b = f.el.getBBox(); return pad({x: b.x, y: b.y, w: b.width, h: b.height}, .08); }
 
@@ -300,7 +361,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') goUp(); });
 
 function applyView(pinName) {
   tipOff();
-  $('labels').innerHTML = '';
+  $('labels').innerHTML = ''; $('inset').innerHTML = '';
   // 시군구 층
   feats.forEach(f => {
     let op = 1, cls = 'r can';
@@ -331,7 +392,7 @@ function applyView(pinName) {
   }
   const target = view.level === 0 ? fullBox : view.level === 1 ? sidoBox(view.sido) : sgBox(view.sg);
   render();
-  animateTo(target, () => { drawLabels(); });
+  animateTo(target, () => { drawLabels(); drawInset(); });
   if (view.level === 2) setTimeout(() => { layer.style.opacity = 1; }, 120);
 }
 
@@ -447,6 +508,7 @@ function emdDetail(e) {
     : `<div class="meta" style="margin-top:6px">${species} 자료가 없습니다.</div>`);
 }
 function showContext() {
+  $('detail').classList.toggle('hw', isHW());
   if (view.level === 0 && isHW()) {
     const F = feats.reduce((a, f) => a + (f.hfs || 0), 0), H = feats.reduce((a, f) => a + (f.hs || 0), 0);
     showDetail(`<h2>전국</h2>
@@ -508,7 +570,7 @@ function drawLabels() {
     g.appendChild(t);
   });
 }
-window.addEventListener('resize', () => drawLabels());
+window.addEventListener('resize', () => { drawLabels(); drawInset(); });
 
 /* ---------- 전체 그리기 ---------- */
 function render() {
