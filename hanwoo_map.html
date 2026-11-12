@@ -158,6 +158,10 @@ const aggFeats = list => {
   const fa = list.reduce((a, f) => a + farmsOf(f), 0), he = list.reduce((a, f) => a + headOf(f), 0);
   return metric === 'farm' ? fa : metric === 'head' ? he : (fa > 0 ? he / fa : 0);
 };
+// 한우 자료는 구 없이 집계된 시(청주시·광역시 등)를 소속 구마다 같은 값으로 넣어 두므로,
+// 순위 목록에서는 대표 구(hs > 0) 하나만 남기고 시 이름으로 보여 준다 (같은 값이 여러 줄 나오지 않게)
+const rankList = list => isHW() ? list.filter(f => !f.hg || f.hs > 0) : list;
+const rankName = f => isHW() && f.hg ? f.hg : f.name;
 function calcE(e) {
   e.farms = e.f[species] || 0;
   e.hd = species === '소' ? (e.h || 0) : 0;
@@ -530,18 +534,18 @@ function render() {
     const groups = {}; feats.forEach(f => (groups[f.code2] = groups[f.code2] || []).push(f));
     const rows = Object.entries(groups).map(([k, l]) => ({label: sidoName[k], v: aggFeats(l), click: () => goSido(k)})).sort((a, b) => b.v - a.v);
     bars($('p1'), rows);
-    const top = feats.filter(f => val(f) > 0).sort((a, b) => val(b) - val(a)).slice(0, 15);
-    bars($('p2'), top.map(f => ({label: f.name, sub: f.sido, v: val(f), click: () => goSg(f), enter: () => showDetail(sigunguDetail(f))})));
+    const top = rankList(feats).filter(f => val(f) > 0).sort((a, b) => val(b) - val(a)).slice(0, 15);
+    bars($('p2'), top.map(f => ({label: rankName(f), sub: f.sido, v: val(f), click: () => goSg(f), enter: () => showDetail(sigunguDetail(f))})));
   } else if (view.level === 1) {
     $('t1').textContent = `${sidoName[view.sido]} 시군구별`; $('t2').textContent = `${sidoName[view.sido]} 읍면동 상위 15`;
     const list = feats.filter(f => f.code2 === view.sido).sort((a, b) => val(b) - val(a));
-    bars($('p1'), list.map(f => ({label: f.name, v: val(f), click: () => goSg(f), enter: () => showDetail(sigunguDetail(f))})));
+    bars($('p1'), rankList(list).map(f => ({label: rankName(f), v: val(f), click: () => goSg(f), enter: () => showDetail(sigunguDetail(f))})));
     const all = [];
     if (isHW()) {
       $('t2').textContent = `${sidoName[view.sido]} 한우 농가당 두수`;
-      const avgL = feats.filter(f => f.code2 === view.sido && f.hwf > 0).map(f => ({f, v: f.hw / f.hwf})).sort((a, b) => b.v - a.v);
+      const avgL = rankList(feats.filter(f => f.code2 === view.sido && f.hwf > 0)).map(f => ({f, v: f.hw / f.hwf})).sort((a, b) => b.v - a.v);
       const m0 = metric; metric = 'hwavg';
-      bars($('p2'), avgL.map(r => ({label: r.f.name, v: r.v, click: () => goSg(r.f), enter: () => { metric = 'hwavg'; showDetail(sigunguDetail(r.f)); metric = m0; }})));
+      bars($('p2'), avgL.map(r => ({label: rankName(r.f), v: r.v, click: () => goSg(r.f), enter: () => { metric = 'hwavg'; showDetail(sigunguDetail(r.f)); metric = m0; }})));
       metric = m0;
     } else {
     list.forEach(f => (DATA.emds[f.id] || []).forEach(([n, d, fm, h]) => { const v = emdVal(fm, h); if (v > 0) all.push({n, f, v}); }));
@@ -552,8 +556,8 @@ function render() {
     $('t1').textContent = `${view.sg.name} 읍면동별`; $('t2').textContent = `${sidoName[view.sido]} 시군구 순위`;
     const sorted = [...emdList].sort((a, b) => b.v - a.v);
     bars($('p1'), sorted.map(e => ({label: e.name, v: e.v, click: () => { pinned = (pinned === e ? null : e); markSel(); showContext(); }, enter: () => showDetail(emdDetail(e))})));
-    const list = feats.filter(f => f.code2 === view.sido).sort((a, b) => val(b) - val(a));
-    bars($('p2'), list.map(f => ({label: f.name, v: val(f), click: () => goSg(f), enter: () => showDetail(sigunguDetail(f))})), r => r.label === view.sg.name);
+    const list = rankList(feats.filter(f => f.code2 === view.sido)).sort((a, b) => val(b) - val(a));
+    bars($('p2'), list.map(f => ({label: rankName(f), v: val(f), click: () => goSg(f), enter: () => showDetail(sigunguDetail(f))})), r => r.label === rankName(view.sg));
   }
   markSel();
   showContext();
