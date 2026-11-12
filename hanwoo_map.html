@@ -83,6 +83,13 @@ h3{margin:0 0 8px;font-size:.95rem}
 @media (max-width:1000px){.two{grid-template-columns:1fr}}
 .note{font-size:.78rem;color:var(--muted);margin-top:18px;line-height:1.6}
 .empty{color:var(--muted);font-size:.9rem}
+.szl{display:flex;gap:14px;font-size:.75rem;color:var(--muted);margin:0 0 4px}
+.szl i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.sz{display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:10px;align-items:center;padding:5px 0;border-top:1px solid var(--line);font-size:.8rem}
+.sz .b{display:grid;gap:3px}
+.sz .b i{display:block;height:7px;border-radius:2px;min-width:2px}
+.sz .n{text-align:right;font-variant-numeric:tabular-nums;line-height:1.35;white-space:nowrap}
+.sz .n small{color:var(--muted)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -365,6 +372,26 @@ function bars(el, rows, selFn) {
 function showDetail(html) { $('detail').innerHTML = html; }
 const topList = (rows, f = fv) => `<ol>${rows.map(([a, b]) => `<li><span>${a}</span><b>${f(b)}</b></li>`).join('')}</ol>`;
 
+/* 한우 사육 규모 구간별 농가 수·두수 (전국·시도·시군구 공통)
+   구 없이 집계된 시는 소속 구마다 같은 hb 를 갖고 있어, 여러 곳을 합칠 때는 대표 구(hs > 0)만 더한다 */
+function sizeSum(list) {
+  const uniq = list.length === 1 ? list : list.filter(f => !f.hg || f.hs > 0);
+  const m = new Map();
+  uniq.forEach(f => (f.hb || []).forEach(([k, a, b]) => { const v = m.get(k) || [0, 0]; v[0] += a; v[1] += b; m.set(k, v); }));
+  return [...m].map(([k, [a, b]]) => [k, a, b]);
+}
+function sizeTable(list) {
+  const rows = sizeSum(list), F = rows.reduce((a, r) => a + r[1], 0), H = rows.reduce((a, r) => a + r[2], 0);
+  if (!F) return '';
+  const pf = r => r[1] / F * 100, ph = r => r[2] / H * 100;
+  const mf = Math.max(...rows.map(pf)), mh = Math.max(...rows.map(ph));
+  return `<h3 style="margin-top:14px">사육 규모별 한우 농가</h3>
+    <div class="szl"><span><i style="background:var(--r5)"></i>농가 수 비중</span><span><i style="background:var(--r2)"></i>두수 비중</span></div>` +
+    rows.map(r => `<div class="sz"><b>${r[0]}</b>
+      <div class="b"><i style="width:${pf(r) / mf * 100}%;background:var(--r5)"></i><i style="width:${ph(r) / mh * 100}%;background:var(--r2)"></i></div>
+      <div class="n">${fmt(r[1])}호 <small>${pf(r).toFixed(1)}%</small><br><small>${fmt(r[2])}두 ${ph(r).toFixed(1)}%</small></div></div>`).join('');
+}
+
 function subLine(farms, head) {
   if (species !== '소' || !DATA.hasHead) return '';
   return `<div class="meta">농장 ${fmt(farms)}곳 · 사육 ${fmt(head)}두${farms > 0 ? ` · 농장당 ${(head / farms).toFixed(1)}두` : ''}</div>`;
@@ -378,14 +405,11 @@ function hwDetail(f) {
   const share = metric === 'hwavg' ? `${where} 평균 ${aggFeats(pool).toFixed(1)}두/호`
     : `${where} 대비 ${(f.hw / aggFeats(pool) * 100).toFixed(1)}%`;
   const prev = f.hwp > 0 ? `${f.hw >= f.hwp ? '+' : ''}${((f.hw / f.hwp - 1) * 100).toFixed(1)}%` : '';
-  const bins = (f.hb || []).filter(b => b[1] > 0 || b[2] > 0);
-  const maxB = Math.max(1, ...bins.map(b => b[2]));
   return `<h2>${f.sido} ${f.hg || f.name}</h2>` + (v > 0 ?
     `<div class="big">${fv(v)}<span style="font-size:1rem;font-weight:500;color:var(--ink)"> ${UNIT()}</span></div>
      <div class="meta">한우 · ${where} ${fmt(has.length)}곳 중 ${rank}위 · ${share}</div>
      <div class="meta">한우 농가 ${fmt(f.hwf)}호 · 사육 ${fmt(f.hw)}두 · 농가당 ${(f.hw / f.hwf).toFixed(1)}두${prev ? ` · 전년 대비 ${prev}` : ''}</div>
-     <h3 style="margin-top:12px">사육 규모별 (호 · 두)</h3>
-     <ol>${bins.map(b => `<li><span>${b[0]}</span><b>${fmt(b[1])}호 · ${fmt(b[2])}두</b></li>`).join('')}</ol>
+     ${sizeTable([f])}
      ${f.hg ? `<div class="meta" style="margin-top:8px">※ 이 자료는 ${f.hg} 전체를 한 덩어리로 집계해서, 소속 구가 모두 같은 값으로 표시됩니다.</div>` : ''}
      <div class="meta" style="margin-top:8px">${view.level === 0 ? '눌러서 해당 시도로 확대' : '읍면동 한우 두수는 제공되지 않아 소 전체 두수로 보여 드립니다'}</div>`
     : `<div class="meta" style="margin-top:6px">한우 자료가 없습니다.</div>`);
@@ -421,7 +445,14 @@ function emdDetail(e) {
     : `<div class="meta" style="margin-top:6px">${species} 자료가 없습니다.</div>`);
 }
 function showContext() {
-  if (view.level === 0) {
+  if (view.level === 0 && isHW()) {
+    const F = feats.reduce((a, f) => a + (f.hfs || 0), 0), H = feats.reduce((a, f) => a + (f.hs || 0), 0);
+    showDetail(`<h2>전국</h2>
+      <div class="big">${fv(aggFeats(feats))}<span style="font-size:1rem;font-weight:500;color:var(--ink)"> ${UNIT()}</span></div>
+      <div class="meta">한우 농가 ${fmt(F)}호 · 사육 ${fmt(H)}두 · 농가당 ${(H / F).toFixed(1)}두 · ${DATA.hwYear}년 1월 1일 기준</div>
+      ${sizeTable(feats)}
+      <div class="meta" style="margin-top:8px">시도를 누르면 그 시도의 규모별 농가가 보입니다</div>`);
+  } else if (view.level === 0) {
     showDetail(`<div class="empty">시도를 눌러 확대하고, 다시 시군구를 누르면 읍면동까지 들어갑니다.<br>마우스를 올리면 해당 지역의 수치가 나옵니다.<br><span style="font-size:.8rem">되돌아가기: 위쪽 경로 버튼 또는 Esc 키</span></div>`);
   } else if (view.level === 1) {
     const list = feats.filter(f => f.code2 === view.sido).sort((a, b) => val(b) - val(a));
@@ -429,7 +460,8 @@ function showContext() {
     showDetail(`<h2>${sidoName[view.sido]}</h2>
       <div class="big">${fv(tot)}<span style="font-size:1rem;font-weight:500;color:var(--ink)"> ${UNIT()}</span></div>
       <div class="meta">${species} · 시군구 ${list.length}곳</div>
-      <h3 style="margin-top:12px">시군구 상위</h3>${topList(list.slice(0, 5).map(f => [f.name, val(f)]))}
+      <h3 style="margin-top:12px">시군구 상위</h3>${topList(rankList(list).slice(0, 5).map(f => [rankName(f), val(f)]))}
+      ${isHW() ? sizeTable(list) : ''}
       <div class="meta" style="margin-top:8px">시군구를 누르면 읍면동이 보입니다</div>`);
   } else if (pinned) {
     showDetail(emdDetail(pinned));
