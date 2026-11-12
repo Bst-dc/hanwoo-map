@@ -165,7 +165,45 @@ def hanwoo_units(hw_rows, geo):
     return year, out, unlinked
 
 
+def make_resolver(geo):
+    """자료의 시군구 이름이 2018 경계에 없을 때(옛 행정구역) 경계 쪽 시군구로 바꿔 주는 함수를 만듭니다.
+
+    - 폐지된 구: '부천시원미구' → '부천시' (경계 시군구 이름으로 시작하면 그쪽으로)
+    - 통합된 군: '청원군 미원면' → 같은 시도 안에서 그 읍면동이 하나뿐인 시군구('청주시상당구')
+    못 찾으면 원래 이름을 그대로 돌려줍니다 (지도에 안 나오는 자료로 남음).
+    """
+    keys = {(g["sidoFull"], g["name"].replace(" ", "")) for g in geo["feats"]}
+    id_key = {g["id"]: (g["sidoFull"], g["name"].replace(" ", "")) for g in geo["feats"]}
+    emd_home = defaultdict(set)                      # (시도, 읍면동) -> {시군구}
+    for c5, lst in geo["emds"].items():
+        sido, sg = id_key[c5]
+        for name, _d in lst:
+            emd_home[(sido, name)].add(sg)
+    cache, moved = {}, defaultdict(int)
+
+    def resolve(sido, sg, emd):
+        if (sido, sg) in keys:
+            return sg
+        ck = (sido, sg, emd)
+        if ck not in cache:
+            new = sg
+            pre = [k[1] for k in keys if k[0] == sido and sg.startswith(k[1])]
+            homes = emd_home.get((sido, emd), set())
+            if len(pre) == 1:
+                new = pre[0]
+            elif len(homes) == 1:
+                new = next(iter(homes))
+            cache[ck] = new
+        if cache[ck] != sg:
+            moved[f"{sido} {sg} → {cache[ck]}"] += 1
+        return cache[ck]
+
+    resolve.moved = moved
+    return resolve
+
+
 def build_data(rows, head_rows, geo, fetched, hw_rows=None):
+    resolve = make_resolver(geo)
     farms = defaultdict(lambda: defaultdict(int))   # (시도, 시군구, 읍면동) -> 축종 -> 농장 수
     sg_sp = defaultdict(lambda: defaultdict(int))   # (시도, 시군구) -> 축종 -> 농장 수
     emd_sp = defaultdict(list)                      # (시도, 시군구, 축종) -> [(읍면동, 수)]
@@ -184,6 +222,7 @@ def build_data(rows, head_rows, geo, fetched, hw_rows=None):
         if sido == "세종특별자치시":
             sg = "세종시"
         emd = r.get("EMD_NM", "")
+        sg = resolve(sido, sg, emd)
         farms[(sido, sg, emd)][sp] += n
         sg_sp[(sido, sg)][sp] += n
         emd_sp[(sido, sg, sp)].append((emd, n))
@@ -205,6 +244,7 @@ def build_data(rows, head_rows, geo, fetched, hw_rows=None):
         if sido == "세종특별자치시":
             sg = "세종시"
         emd = r.get("EMD_NM", "")
+        sg = resolve(sido, sg, emd)
         head_emd[(sido, sg, emd)] += n
         head_sg[(sido, sg)] += n
         head_list[(sido, sg)].append((emd, n))
@@ -268,6 +308,7 @@ def build_data(rows, head_rows, geo, fetched, hw_rows=None):
         "hwUnlinked": hw_unlinked,
         "unknownH": unknown_h,
         "unmatchedH": dict(unmatched_h),
+        "oldNames": dict(resolve.moved),
         "meta": {"fetched": fetched, "asof": read_asof()},
     }
 
@@ -332,6 +373,8 @@ def main():
         print(f"한우 사육 두수({data['hwYear']}년 기준): {tot:,}두")
         for u in data["hwUnlinked"]:
             print(f"[알림] 지도와 연결하지 못한 한우 자료: {u[0]} {u[1]} {u[2]:,}두")
+    for k, cnt in sorted(data["oldNames"].items()):
+        print(f"[알림] 옛 행정구역 이름 연결: {k} ({cnt}건)")
     print("브라우저에서 hanwoo_map.html 을 새로고침(Ctrl+F5)하세요.")
 
 

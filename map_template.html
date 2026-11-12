@@ -193,7 +193,10 @@ function tip(ev, html) {
 function tipOff() { tipEl.style.opacity = 0; }
 
 /* ---------- 축종 ---------- */
-const spList = Object.entries(DATA.speciesTotal).sort((a, b) => b[1] - a[1]);
+// 지도에 놓이는 농장만 센다 (시도가 비어 있는 자료는 빼서 카드의 전국 합계와 맞춘다)
+const spList = Object.entries(DATA.speciesTotal)
+  .map(([k, v]) => [k, v - (DATA.unknown[k] || 0)])
+  .sort((a, b) => b[1] - a[1]);
 $('sp').innerHTML = spList.map(([k, v]) => `<option value="${k}">${k} (${fmt(v)})</option>`).join('');
 $('sp').value = species;
 $('sp').addEventListener('change', e => { species = e.target.value; render(); });
