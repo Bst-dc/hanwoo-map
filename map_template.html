@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="ko" data-style="night">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>사육지도</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--fb:"Noto Sans KR","Pretendard","Malgun Gothic",system-ui,sans-serif;--fh:"Noto Serif KR","Batang",serif}
+/* 야간: 회의실 화면 투사용 */
+:root[data-style="night"]{
+  --fh:var(--fb);
+  --bg:#0e1219; --panel:#161c27; --ink:#e9edf3; --muted:#8c97a9; --line:#242d3d;
+  --sea:#0b0f15; --nodata:#1a2230; --stroke:#0e1219; --prov:#5b6c88; --accent:#fbd24d;
+  --r0:#2e2358; --r1:#5a2b86; --r2:#8a2f8f; --r3:#c13b82; --r4:#e8575f; --r5:#f98d43; --r6:#fbd24d;
+  --radius:12px; --shadow:0 0 0 1px rgba(255,255,255,.02); --maplift:none;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--fb);line-height:1.5;transition:background .3s,color .3s}
+.wrap{max-width:1220px;margin:0 auto;padding:22px 18px 44px}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px}
+h1{margin:0;font-family:var(--fh);font-size:1.7rem;font-weight:800;letter-spacing:-.02em}
+.asof{color:var(--muted);font-size:.82rem;margin-top:2px}
+.controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:.9rem}
+.controls label{color:var(--muted)}
+select,button.btn{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:calc(var(--radius) * .6);padding:6px 10px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:calc(var(--radius) * .7);overflow:hidden;background:var(--panel)}
+.seg button{font:inherit;font-size:.85rem;color:var(--muted);background:none;border:0;padding:6px 12px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--panel);font-weight:700}
+.seg button:disabled{opacity:.35;cursor:not-allowed}
+.kpis{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 16px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:9px 16px;min-width:150px;box-shadow:var(--shadow)}
+.kpi span{display:block;font-size:.78rem;color:var(--muted)}
+.kpi b{font-family:var(--fh);font-size:1.35rem;font-weight:800;letter-spacing:-.01em}
+.grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)}
+.crumbbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-height:34px;margin-bottom:8px;font-size:.92rem}
+.crumbbar .sep{color:var(--muted)}
+.crumbbar button{font:inherit;background:none;border:0;color:var(--accent);cursor:pointer;padding:2px 5px;border-radius:6px;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.crumbbar b{padding:2px 5px;font-family:var(--fh)}
+.crumbbar .back{margin-left:auto;color:var(--ink);border:1px solid var(--line);border-radius:calc(var(--radius) * .6);padding:3px 11px;text-decoration:none}
+.hint{color:var(--muted);font-size:.8rem;margin-left:auto}
+svg#map{width:100%;height:auto;display:block;background:var(--sea);border-radius:max(2px,calc(var(--radius) - 4px));box-shadow:var(--maplift);transition:background .3s}
+svg#map path{vector-effect:non-scaling-stroke}
+svg#map path.r{stroke:var(--stroke);stroke-width:.7px;cursor:pointer;transition:opacity .3s,fill .3s}
+svg#map path.r.can:hover{stroke:var(--accent);stroke-width:2px}
+svg#map path.r.off{pointer-events:none;cursor:default}
+svg#map path.e{stroke:var(--stroke);stroke-width:.9px;cursor:pointer}
+svg#map path.e:hover{stroke:var(--accent);stroke-width:2.2px}
+svg#map path.e.sel{stroke:var(--accent);stroke-width:2.8px}
+svg#map path.prov{fill:none;stroke:var(--prov);stroke-width:1.2px;pointer-events:none;opacity:.75;transition:opacity .3s}
+svg#map #emdLayer{transition:opacity .4s}
+svg#map text{pointer-events:none;text-anchor:middle;dominant-baseline:central;fill:var(--ink);stroke:var(--panel);stroke-linejoin:round;paint-order:stroke;font-weight:700}
+.legend{margin-top:12px;font-size:.78rem;color:var(--muted)}
+.legend .scope{margin-bottom:6px}
+.legend .ramp{display:flex;gap:2px}
+.legend .ramp div{flex:1;min-width:0}
+.legend .ramp i{display:block;height:10px;border-radius:2px}
+.legend .ramp small{display:block;margin-top:3px;font-size:.7rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.legend .nd{display:inline-flex;align-items:center;gap:5px;margin-top:6px}
+.legend .nd i{width:12px;height:12px;border-radius:3px;border:1px solid var(--line);background:var(--nodata)}
+#tip{position:fixed;z-index:10;pointer-events:none;background:var(--ink);color:var(--panel);padding:5px 10px;border-radius:calc(var(--radius) * .6);font-size:.82rem;line-height:1.35;opacity:0;transition:opacity .08s;white-space:nowrap}
+#tip b{font-family:var(--fh)}
+.detail{min-height:352px}
+.detail h2{margin:0;font-family:var(--fh);font-size:1.2rem;font-weight:800}
+.detail .big{font-family:var(--fh);font-size:2.2rem;font-weight:800;letter-spacing:-.02em;color:var(--accent);margin:4px 0 0}
+.detail .meta{color:var(--muted);font-size:.85rem}
+.detail ol{margin:8px 0 0;padding-left:20px;font-size:.9rem}
+.detail li{display:flex;justify-content:space-between;gap:12px;padding:1px 0}
+h3{margin:0 0 8px;font-size:.95rem}
+.bars{display:grid;gap:3px;max-height:420px;overflow:auto}
+.bar{display:grid;grid-template-columns:104px 1fr 62px;align-items:center;gap:8px;font-size:.82rem;cursor:pointer;padding:1px 3px;border-radius:6px}
+.bar:hover,.bar.sel{background:var(--bg)}
+.bar.sel .l{font-weight:700}
+.bar .t{height:9px;background:var(--r4);border-radius:5px;min-width:2px}
+.bar .n{text-align:right;font-variant-numeric:tabular-nums}
+.bar .l{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.side{display:grid;gap:16px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:1000px){.two{grid-template-columns:1fr}}
+.note{font-size:.78rem;color:var(--muted);margin-top:18px;line-height:1.6}
+.empty{color:var(--muted);font-size:.9rem}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1>사육지도</h1><div class="asof" id="asof"></div></div>
+    <div class="controls">
+      <span class="seg" id="metricSeg" role="group" aria-label="지표">
+        <button data-m="farm">농장 수</button><button data-m="head">두수</button><button data-m="avg">농장당 두수</button><button data-m="hw" title="한우만 집계한 자료 (시군구 단위, 소 선택 시)">한우 두수</button><button data-m="hwavg" title="한우 농가 1호당 두수 (시군구 단위)">한우 농가당</button>
+      </span>
+      <span><label for="sp">축종 </label><select id="sp"></select></span>
+    </div>
+  </header>
+  <div class="kpis" id="kpis"></div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="crumbbar" id="crumbs"></div>
+      <svg id="map" role="img" aria-label="사육 농장 수 지도">
+        <g id="regions"></g><g id="emdLayer"></g><path class="prov" id="borders"></path><g id="labels"></g>
+      </svg>
+      <div class="legend" id="legend"></div>
+    </div>
+
+    <div class="side">
+      <div class="card detail" id="detail"></div>
+      <div class="two">
+        <div class="card"><h3 id="t1"></h3><div class="bars" id="p1"></div></div>
+        <div class="card"><h3 id="t2"></h3><div class="bars" id="p2"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="note" id="note"></p>
+</div>
+<div id="tip"></div>
+
+<script>
+const DATA = __DATA__;
+const fmt = n => Number(n).toLocaleString('ko-KR');
+const $ = id => document.getElementById(id);
+const NS = 'http://www.w3.org/2000/svg';
+const svg = $('map');
+
+let species = '소';
+let view = {level: 0, sido: null, sg: null};
+let pinned = null;          // 읍면동 단계에서 고정한 읍면동
+let emdList = [];           // 현재 시군구의 읍면동
+let box = null, fullBox = null, anim = 0;
+
+const feats = DATA.feats;
+feats.forEach(f => { f.code2 = f.id.slice(0, 2); });
+const byId = {}; feats.forEach(f => byId[f.id] = f);
+const sidoName = {}; feats.forEach(f => sidoName[f.code2] = f.sido);
+let metric = 'farm';        // farm: 농장 수 · head: 사육 두수 · avg: 농장당 두수
+const farmsOf = f => f.f[species] || 0;
+const headOf = f => species === '소' ? (f.h || 0) : 0;
+const isHW = () => metric === 'hw' || metric === 'hwavg';
+const val = f => metric === 'farm' ? farmsOf(f) : metric === 'head' ? headOf(f)
+  : metric === 'hw' ? (f.hw || 0) : metric === 'hwavg' ? (f.hwf > 0 ? f.hw / f.hwf : 0)
+  : (farmsOf(f) > 0 ? headOf(f) / farmsOf(f) : 0);
+const fv = n => (metric === 'avg' || metric === 'hwavg') ? Number(n).toFixed(1) : fmt(n);
+const UNIT = () => ({farm: '농장', head: '두', avg: '두/농장', hw: '두', hwavg: '두/호'}[metric]);
+const TIPU = () => ({farm: '곳', head: '두', avg: '두/농장', hw: '두', hwavg: '두/호'}[metric]);
+const KU = () => ({farm: '곳', head: '두', avg: '두', hw: '두', hwavg: '두'}[metric]);
+const MLABEL = {farm: '농장 수', head: '사육 두수(소 전체)', avg: '농장당 두수(소 전체)', hw: '한우 사육 두수', hwavg: '한우 농가당 두수'};
+const aggFeats = list => {
+  if (isHW()) {
+    const d = list.reduce((a, f) => a + (f.hs || 0), 0), h = list.reduce((a, f) => a + (f.hfs || 0), 0);
+    return metric === 'hw' ? d : (h > 0 ? d / h : 0);
+  }
+  const fa = list.reduce((a, f) => a + farmsOf(f), 0), he = list.reduce((a, f) => a + headOf(f), 0);
+  return metric === 'farm' ? fa : metric === 'head' ? he : (fa > 0 ? he / fa : 0);
+};
+function calcE(e) {
+  e.farms = e.f[species] || 0;
+  e.hd = species === '소' ? (e.h || 0) : 0;
+  e.v = metric === 'farm' ? e.farms : metric === 'head' ? e.hd : (e.farms > 0 ? e.hd / e.farms : 0);
+}
+const emdVal = (fm, h) => {
+  const fa = fm[species] || 0, he = species === '소' ? (h || 0) : 0;
+  return metric === 'farm' ? fa : metric === 'head' ? he : (fa > 0 ? he / fa : 0);
+};
+function syncMetric() {
+  const okH = !!DATA.hasHead && species === '소';
+  const okW = !!DATA.hasHanwoo && species === '소' && view.level < 2;   // 한우 자료는 시군구 단위까지
+  if (isHW() && !okW) metric = okH ? 'head' : 'farm';
+  if ((metric === 'head' || metric === 'avg') && !okH) metric = 'farm';
+  $('metricSeg').style.display = (DATA.hasHead || DATA.hasHanwoo) ? '' : 'none';
+  document.querySelectorAll('#metricSeg button').forEach(b => {
+    const m = b.dataset.m;
+    const hide = (m === 'head' || m === 'avg') ? !DATA.hasHead : (m === 'hw' || m === 'hwavg') ? !DATA.hasHanwoo : false;
+    b.style.display = hide ? 'none' : '';
+    b.disabled = m === 'farm' ? false : (m === 'hw' || m === 'hwavg') ? !okW : !okH;
+    b.setAttribute('aria-pressed', m === metric);
+  });
+}
+
+
+/* ---------- 말풍선 ---------- */
+const tipEl = $('tip');
+function tip(ev, html) {
+  tipEl.innerHTML = html; tipEl.style.opacity = 1;
+  const x = Math.min(ev.clientX + 14, window.innerWidth - tipEl.offsetWidth - 8);
+  tipEl.style.left = x + 'px'; tipEl.style.top = (ev.clientY + 16) + 'px';
+}
+function tipOff() { tipEl.style.opacity = 0; }
+
+/* ---------- 축종 ---------- */
+const spList = Object.entries(DATA.speciesTotal).sort((a, b) => b[1] - a[1]);
+$('sp').innerHTML = spList.map(([k, v]) => `<option value="${k}">${k} (${fmt(v)})</option>`).join('');
+$('sp').value = species;
+$('sp').addEventListener('change', e => { species = e.target.value; render(); });
+document.querySelectorAll('#metricSeg button').forEach(b => b.addEventListener('click', () => { metric = b.dataset.m; render(); }));
+
+/* ---------- 시군구 그리기 ---------- */
+const regionsG = $('regions');
+feats.forEach(f => {
+  const p = document.createElementNS(NS, 'path');
+  p.setAttribute('d', f.d);
+  p.setAttribute('class', 'r can');
+  p.addEventListener('mouseenter', () => { if (canUse(f)) showDetail(sigunguDetail(f)); });
+  p.addEventListener('mousemove', ev => { if (canUse(f)) tip(ev, `<b>${f.name}</b> ${fv(val(f))}${TIPU()}`); });
+  p.addEventListener('mouseleave', () => { tipOff(); showContext(); });
+  p.addEventListener('click', () => {
+    if (view.level === 0) goSido(f.code2);
+    else if (view.level === 1 && f.code2 === view.sido) goSg(f);
+  });
+  regionsG.appendChild(p);
+  f.el = p;
+});
+$('borders').setAttribute('d', DATA.borders);
+const bb0 = svg.getBBox();
+fullBox = {x: bb0.x - 4, y: bb0.y - 4, w: bb0.width + 8, h: bb0.height + 8};
+svg.style.aspectRatio = `${fullBox.w} / ${fullBox.h}`;
+setBox(fullBox);
+
+function canUse(f) {
+  if (view.level === 0) return true;
+  if (view.level === 1) return f.code2 === view.sido;
+  return false;
+}
+
+/* ---------- 확대 ---------- */
+function setBox(b) {
+  box = b;
+  svg.setAttribute('viewBox', `${b.x} ${b.y} ${b.w} ${b.h}`);
+}
+function animateTo(t, done) {
+  cancelAnimationFrame(anim);
+  const s = {...box}, t0 = performance.now(), dur = 480;
+  const ease = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+  const step = now => {
+    const k = Math.min(1, (now - t0) / dur), e = ease(k);
+    setBox({x: s.x + (t.x - s.x) * e, y: s.y + (t.y - s.y) * e, w: s.w + (t.w - s.w) * e, h: s.h + (t.h - s.h) * e});
+    if (k < 1) anim = requestAnimationFrame(step); else if (done) done();
+  };
+  anim = requestAnimationFrame(step);
+}
+function pad(b, r) {
+  const px = b.w * r, py = b.h * r;
+  return {x: b.x - px, y: b.y - py, w: b.w + 2 * px, h: b.h + 2 * py};
+}
+function union(boxes) {
+  const x0 = Math.min(...boxes.map(b => b.x)), y0 = Math.min(...boxes.map(b => b.y));
+  const x1 = Math.max(...boxes.map(b => b.x + b.width)), y1 = Math.max(...boxes.map(b => b.y + b.height));
+  return {x: x0, y: y0, w: x1 - x0, h: y1 - y0};
+}
+const sidoBoxCache = {};
+function sidoBox(code2) {
+  if (sidoBoxCache[code2]) return sidoBoxCache[code2];
+  const items = feats.filter(f => f.code2 === code2).map(f => f.el.getBBox());
+  const areaSum = items.reduce((a, b) => a + b.width * b.height, 0);
+  // 멀리 떨어진 작은 섬(울릉도 등)은 확대 범위에서 제외
+  const main = items.filter(b => b.width * b.height >= areaSum * 0.015);
+  let u = union(main.length ? main : items);
+  const pu = pad(u, .05);
+  const rest = items.filter(b => !main.includes(b) &&
+    b.x >= pu.x && b.y >= pu.y && b.x + b.width <= pu.x + pu.w && b.y + b.height <= pu.y + pu.h);
+  if (rest.length) u = union([...main, ...rest]);
+  return sidoBoxCache[code2] = pad(u, .07);
+}
+function sgBox(f) { const b = f.el.getBBox(); return pad({x: b.x, y: b.y, w: b.width, h: b.height}, .08); }
+
+/* ---------- 이동 ---------- */
+function goTop() { pinned = null; view = {level: 0, sido: null, sg: null}; applyView(); }
+function goSido(code2) { pinned = null; view = {level: 1, sido: code2, sg: null}; applyView(); }
+function goSg(f, pin) {
+  pinned = null;
+  view = {level: 2, sido: f.code2, sg: f};
+  applyView(pin);
+}
+function goUp() {
+  if (view.level === 2) goSido(view.sido);
+  else if (view.level === 1) goTop();
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') goUp(); });
+
+function applyView(pinName) {
+  tipOff();
+  $('labels').innerHTML = '';
+  // 시군구 층
+  feats.forEach(f => {
+    let op = 1, cls = 'r can';
+    if (view.level === 1 && f.code2 !== view.sido) { op = .1; cls = 'r off'; }
+    if (view.level === 2) { op = 0; cls = 'r off'; }
+    f.el.setAttribute('class', cls);
+    f.el.style.opacity = op;
+  });
+  $('borders').style.opacity = view.level === 2 ? 0 : .7;
+  // 읍면동 층
+  const layer = $('emdLayer');
+  layer.innerHTML = ''; emdList = [];
+  if (view.level === 2) {
+    (DATA.emds[view.sg.id] || []).forEach(([name, d, fm, h]) => {
+      const p = document.createElementNS(NS, 'path');
+      p.setAttribute('d', d); p.setAttribute('class', 'e');
+      const e = {name, f: fm, h, el: p};
+      calcE(e);
+      p.addEventListener('mouseenter', () => showDetail(emdDetail(e)));
+      p.addEventListener('mousemove', ev => tip(ev, `<b>${e.name}</b> ${fv(e.v)}${TIPU()}`));
+      p.addEventListener('mouseleave', () => { tipOff(); showContext(); });
+      p.addEventListener('click', () => { pinned = (pinned === e ? null : e); markSel(); showContext(); });
+      layer.appendChild(p);
+      emdList.push(e);
+    });
+    if (pinName) pinned = emdList.find(e => e.name === pinName) || null;
+    layer.style.opacity = 0;
+  }
+  const target = view.level === 0 ? fullBox : view.level === 1 ? sidoBox(view.sido) : sgBox(view.sg);
+  render();
+  animateTo(target, () => { drawLabels(); });
+  if (view.level === 2) setTimeout(() => { layer.style.opacity = 1; }, 120);
+}
+
+/* ---------- 색 ---------- */
+function breaks(vals) {
+  const v = vals.filter(x => x > 0).sort((a, b) => a - b);
+  if (!v.length) return [];
+  const q = i => v[Math.min(v.length - 1, Math.floor(v.length * i / 7))];
+  const out = [];
+  [1, 2, 3, 4, 5, 6].map(q).forEach(x => { if (!out.length || x > out[out.length - 1]) out.push(x); });
+  return out;
+}
+function cls(x, br) { if (x <= 0) return -1; let c = 0; for (let i = 0; i < br.length; i++) if (x >= br[i]) c = i + 1; return c; }
+const colorOf = c => c < 0 ? 'var(--nodata)' : `var(--r${Math.min(c, 6)})`;
+
+function legend(br, hi, scope, lo0 = 1) {
+  const los = [lo0, ...br];
+  let h = `<div class="scope">${scope}</div><div class="ramp">`;
+  los.forEach((lo, i) => {
+    const lab = i < los.length - 1 ? `${fv(lo)}` : `${fv(lo)}+`;
+    h += `<div><i style="background:${colorOf(i)}"></i><small>${lab}</small></div>`;
+  });
+  h += `</div><span class="nd"><i></i>자료 없음</span>`;
+  $('legend').innerHTML = h;
+}
+
+/* ---------- 막대 목록 ---------- */
+function bars(el, rows, selFn) {
+  const max = Math.max(1, ...rows.map(r => r.v));
+  el.innerHTML = rows.map((r, i) =>
+    `<div class="bar${selFn && selFn(r) ? ' sel' : ''}" data-i="${i}"><span class="l">${r.label}${r.sub ? ` <small style="color:var(--muted)">${r.sub}</small>` : ''}</span><span><div class="t" style="width:${r.v / max * 100}%"></div></span><span class="n">${fv(r.v)}</span></div>`).join('');
+  el.querySelectorAll('.bar').forEach(b => {
+    const r = rows[+b.dataset.i];
+    if (r.click) b.addEventListener('click', r.click);
+    if (r.enter) { b.addEventListener('mouseenter', r.enter); b.addEventListener('mouseleave', () => showContext()); }
+  });
+}
+
+/* ---------- 상세 ---------- */
+function showDetail(html) { $('detail').innerHTML = html; }
+const topList = (rows, f = fv) => `<ol>${rows.map(([a, b]) => `<li><span>${a}</span><b>${f(b)}</b></li>`).join('')}</ol>`;
+
+function subLine(farms, head) {
+  if (species !== '소' || !DATA.hasHead) return '';
+  return `<div class="meta">농장 ${fmt(farms)}곳 · 사육 ${fmt(head)}두${farms > 0 ? ` · 농장당 ${(head / farms).toFixed(1)}두` : ''}</div>`;
+}
+function hwDetail(f) {
+  const v = val(f);
+  const pool = view.level === 1 ? feats.filter(x => x.code2 === view.sido) : feats;
+  const where = view.level === 1 ? f.sido : '전국';
+  const has = pool.filter(x => val(x) > 0);
+  const rank = has.filter(x => val(x) > v).length + 1;
+  const share = metric === 'hwavg' ? `${where} 평균 ${aggFeats(pool).toFixed(1)}두/호`
+    : `${where} 대비 ${(f.hw / aggFeats(pool) * 100).toFixed(1)}%`;
+  const prev = f.hwp > 0 ? `${f.hw >= f.hwp ? '+' : ''}${((f.hw / f.hwp - 1) * 100).toFixed(1)}%` : '';
+  const bins = (f.hb || []).filter(b => b[1] > 0 || b[2] > 0);
+  const maxB = Math.max(1, ...bins.map(b => b[2]));
+  return `<h2>${f.sido} ${f.hg || f.name}</h2>` + (v > 0 ?
+    `<div class="big">${fv(v)}<span style="font-size:1rem;font-weight:500;color:var(--ink)"> ${UNIT()}</span></div>
+     <div class="meta">한우 · ${where} ${fmt(has.length)}곳 중 ${rank}위 · ${share}</div>
+     <div class="meta">한우 농가 ${fmt(f.hwf)}호 · 사육 ${fmt(f.hw)}두 · 농가당 ${(f.hw / f.hwf).toFixed(1)}두${prev ? ` · 전년 대비 ${prev}` : ''}</div>
+     <h3 style="margin-top:12px">사육 규모별 (호 · 두)</h3>
+     <ol>${bins.map(b => `<li><span>${b[0]}</span><b>${fmt(b[1])}호 · ${fmt(b[2])}두</b></li>`).join('')}</ol>
+     ${f.hg ? `<div class="meta" style="margin-top:8px">※ 이 자료는 ${f.hg} 전체를 한 덩어리로 집계해서, 소속 구가 모두 같은 값으로 표시됩니다.</div>` : ''}
+     <div class="meta" style="margin-top:8px">${view.level === 0 ? '눌러서 해당 시도로 확대' : '읍면동 한우 두수는 제공되지 않아 소 전체 두수로 보여 드립니다'}</div>`
+    : `<div class="meta" style="margin-top:6px">한우 자료가 없습니다.</div>`);
+}
+function sigunguDetail(f) {
+  if (isHW()) return hwDetail(f);
+  const v = val(f);
+  const pool = view.level === 1 ? feats.filter(x => x.code2 === view.sido) : feats;
+  const where = view.level === 1 ? f.sido : '전국';
+  const rank = pool.filter(x => val(x) > v).length + 1, n = pool.filter(x => val(x) > 0).length;
+  const share = metric === 'avg' ? `${where} 평균 ${aggFeats(pool).toFixed(1)}두`
+    : `${where} 대비 ${(v / pool.reduce((a, x) => a + val(x), 0) * 100).toFixed(1)}%`;
+  const tops = metric === 'farm' ? (f.t[species] || []) : (f.th || []);
+  const topTitle = metric === 'avg' ? '읍면동 상위 (두수)' : '읍면동 상위';
+  return `<h2>${f.sido} ${f.name}</h2>` + (v > 0 ?
+    `<div class="big">${fv(v)}<span style="font-size:1rem;font-weight:500;color:var(--ink)"> ${UNIT()}</span></div>
+     <div class="meta">${species} · ${where} ${fmt(n)}개 시군구 중 ${rank}위 · ${share}</div>
+     ${subLine(farmsOf(f), headOf(f))}
+     <h3 style="margin-top:12px">${topTitle}</h3>${topList(tops, metric === 'avg' ? fmt : fv)}
+     <div class="meta" style="margin-top:8px">${view.level === 0 ? '눌러서 해당 시도로 확대' : '눌러서 읍면동 보기'}</div>`
+    : `<div class="meta" style="margin-top:6px">${species} 자료가 없습니다.</div>`);
+}
+function emdDetail(e) {
+  const f = view.sg;
+  const rank = emdList.filter(x => x.v > e.v).length + 1;
+  const share = metric === 'avg'
+    ? `${f.name} 평균 ${(emdList.reduce((a, x) => a + x.farms, 0) > 0 ? emdList.reduce((a, x) => a + x.hd, 0) / emdList.reduce((a, x) => a + x.farms, 0) : 0).toFixed(1)}두`
+    : `${f.name} 대비 ${(e.v / emdList.reduce((a, x) => a + x.v, 0) * 100).toFixed(1)}%`;
+  return `<h2>${f.sido} ${f.name} ${e.name}</h2>` + (e.v > 0 ?
+    `<div class="big">${fv(e.v)}<span style="font-size:1rem;font-weight:500;color:var(--ink)"> ${UNIT()}</span></div>
+     <div class="meta">${species} · ${f.name} 읍면동 ${fmt(emdList.filter(x => x.v > 0).length)}곳 중 ${rank}위 · ${share}</div>
+     ${subLine(e.farms, e.hd)}`
+    : `<div class="meta" style="margin-top:6px">${species} 자료가 없습니다.</div>`);
+}
+function showContext() {
+  if (view.level === 0) {
+    showDetail(`<div class="empty">시도를 눌러 확대하고, 다시 시군구를 누르면 읍면동까지 들어갑니다.<br>마우스를 올리면 해당 지역의 수치가 나옵니다.<br><span style="font-size:.8rem">되돌아가기: 위쪽 경로 버튼 또는 Esc 키</span></div>`);
+  } else if (view.level === 1) {
+    const list = feats.filter(f => f.code2 === view.sido).sort((a, b) => val(b) - val(a));
+    const tot = aggFeats(list);
+    showDetail(`<h2>${sidoName[view.sido]}</h2>
+      <div class="big">${fv(tot)}<span style="font-size:1rem;font-weight:500;color:var(--ink)"> ${UNIT()}</span></div>
+      <div class="meta">${species} · 시군구 ${list.length}곳</div>
+      <h3 style="margin-top:12px">시군구 상위</h3>${topList(list.slice(0, 5).map(f => [f.name, val(f)]))}
+      <div class="meta" style="margin-top:8px">시군구를 누르면 읍면동이 보입니다</div>`);
+  } else if (pinned) {
+    showDetail(emdDetail(pinned));
+  } else {
+    const f = view.sg;
+    const un = metric === 'farm' ? ((DATA.unmatched[f.id] || {})[species] || 0) : (species === '소' ? ((DATA.unmatchedH || {})[f.id] || 0) : 0);
+    const top = [...emdList].sort((a, b) => b.v - a.v).slice(0, 5).filter(e => e.v > 0);
+    showDetail(`<h2>${f.sido} ${f.name}</h2>
+      <div class="big">${fv(val(f))}<span style="font-size:1rem;font-weight:500;color:var(--ink)"> ${UNIT()}</span></div>
+      <div class="meta">${species} · 읍면동 ${emdList.length}곳</div>
+      ${subLine(farmsOf(f), headOf(f))}
+      <h3 style="margin-top:12px">읍면동 상위</h3>${topList(top.map(e => [e.name, e.v]))}
+      ${un > 0 ? `<div class="meta" style="margin-top:8px">경계와 이름이 달라 읍면동에 표시하지 못한 ${metric === 'farm' ? '농장' : '두수'} ${fmt(un)}${metric === 'farm' ? '곳' : '두'}</div>` : ''}`);
+  }
+}
+function markSel() {
+  emdList.forEach(e => e.el.classList.toggle('sel', e === pinned));
+  document.querySelectorAll('#p1 .bar,#p2 .bar').forEach(b => b.classList.remove('sel'));
+  if (view.level === 2 && pinned) {
+    const i = [...emdList].sort((a, b) => b.v - a.v).indexOf(pinned);
+    const el = document.querySelector(`#p1 .bar[data-i="${i}"]`);
+    if (el) el.classList.add('sel');
+  }
+}
+
+/* ---------- 라벨 ---------- */
+function drawLabels() {
+  const g = $('labels'); g.innerHTML = '';
+  if (view.level === 0) return;
+  const s = Math.min(svg.clientWidth / box.w, svg.clientHeight / box.h);
+  if (!s) return;
+  const px = view.level === 1 ? 11 : 11.5, fs = px / s;
+  const items = view.level === 1
+    ? feats.filter(f => f.code2 === view.sido).map(f => ({el: f.el, text: f.name}))
+    : emdList.map(e => ({el: e.el, text: e.name}));
+  items.forEach(it => {
+    const b = it.el.getBBox();
+    if (b.width * s < it.text.length * px * 0.95 || b.height * s < px * 1.4) return;
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', b.x + b.width / 2); t.setAttribute('y', b.y + b.height / 2);
+    t.setAttribute('font-size', fs); t.setAttribute('stroke-width', fs * .28);
+    t.textContent = it.text;
+    g.appendChild(t);
+  });
+}
+window.addEventListener('resize', () => drawLabels());
+
+/* ---------- 전체 그리기 ---------- */
+function render() {
+  const sp = species;
+  syncMetric();
+  emdList.forEach(calcE);
+  $('asof').textContent = DATA.meta.asof
+    ? `자료 기준 ${DATA.meta.asof} · 받은 날 ${DATA.meta.fetched}`
+    : `데이터 받은 날 ${DATA.meta.fetched} (자료 기준월은 확인되지 않음)`;
+  const natVals = feats.map(val);
+  const natBr = breaks(natVals);
+  let panelVals;
+
+  if (view.level < 2) {
+    feats.forEach(f => { f.el.style.fill = colorOf(cls(val(f), natBr)); });
+    const pos = natVals.filter(x => x > 0);
+    legend(natBr, Math.max(...natVals), (view.level === 0 ? '전국 시군구 기준 (분위수 구간)' : '전국 시군구 기준 · 지역 간 비교용') + ` · ${MLABEL[metric]}`, pos.length ? Math.min(...pos) : 1);
+  } else {
+    const br = breaks(emdList.map(e => e.v));
+    emdList.forEach(e => { e.el.style.fill = colorOf(cls(e.v, br)); });
+    const pos = emdList.map(e => e.v).filter(x => x > 0);
+    legend(br, Math.max(0, ...emdList.map(e => e.v)), `${view.sg.name} 읍면동 기준 (분위수 구간) · ${MLABEL[metric]}`, pos.length ? Math.min(...pos) : 1);
+  }
+
+  // 요약 지표
+  let kScope, kTotal, kCount, kUnit, kTop;
+  if (view.level === 0) {
+    const arr = feats.filter(f => val(f) > 0).sort((a, b) => val(b) - val(a));
+    kScope = '전국'; kTotal = aggFeats(feats); kCount = arr.length; kUnit = '시군구'; kTop = arr[0] ? [arr[0].name, val(arr[0])] : ['-', 0];
+  } else if (view.level === 1) {
+    const arr = feats.filter(f => f.code2 === view.sido && val(f) > 0).sort((a, b) => val(b) - val(a));
+    kScope = sidoName[view.sido]; kTotal = aggFeats(feats.filter(f => f.code2 === view.sido)); kCount = arr.length; kUnit = '시군구'; kTop = arr[0] ? [arr[0].name, val(arr[0])] : ['-', 0];
+  } else {
+    const arr = [...emdList].filter(e => e.v > 0).sort((a, b) => b.v - a.v);
+    kScope = view.sg.name; kTotal = val(view.sg); kCount = arr.length; kUnit = '읍면동'; kTop = arr[0] ? [arr[0].name, arr[0].v] : ['-', 0];
+  }
+  $('kpis').innerHTML =
+    `<div class="kpi"><span>${kScope} ${isHW() ? '한우' : sp} ${metric === 'avg' || metric === 'hwavg' ? '농장당 평균 두수' : metric === 'head' || metric === 'hw' ? '사육 두수' : '농장'}</span><b>${fv(kTotal)}${KU()}</b></div>` +
+    `<div class="kpi"><span>${metric === 'farm' ? '농장이 있는' : '자료가 있는'} ${kUnit}</span><b>${fmt(kCount)}곳</b></div>` +
+    `<div class="kpi"><span>${metric === 'avg' || metric === 'hwavg' ? '가장 높은' : '가장 많은'} ${kUnit}</span><b>${kTop[0]} ${fv(kTop[1])}</b></div>`;
+
+  // 경로 표시줄
+  let c = `<button data-go="top">전국</button>`;
+  if (view.level >= 1) c += `<span class="sep">›</span>` + (view.level === 1 ? `<b>${sidoName[view.sido]}</b>` : `<button data-go="sido">${sidoName[view.sido]}</button>`);
+  if (view.level === 2) c += `<span class="sep">›</span><b>${view.sg.name}</b>`;
+  c += view.level === 0 ? `<span class="hint">시도를 눌러 확대하세요</span>` : `<button class="back" data-go="up">← 뒤로</button>`;
+  $('crumbs').innerHTML = c;
+  $('crumbs').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    const k = b.dataset.go;
+    if (k === 'top') goTop(); else if (k === 'sido') goSido(view.sido); else goUp();
+  }));
+
+  // 오른쪽 목록
+  if (view.level === 0) {
+    $('t1').textContent = `시도별 ${MLABEL[metric]} (눌러서 확대)`; $('t2').textContent = '시군구 상위 15';
+    const groups = {}; feats.forEach(f => (groups[f.code2] = groups[f.code2] || []).push(f));
+    const rows = Object.entries(groups).map(([k, l]) => ({label: sidoName[k], v: aggFeats(l), click: () => goSido(k)})).sort((a, b) => b.v - a.v);
+    bars($('p1'), rows);
+    const top = feats.filter(f => val(f) > 0).sort((a, b) => val(b) - val(a)).slice(0, 15);
+    bars($('p2'), top.map(f => ({label: f.name, sub: f.sido, v: val(f), click: () => goSg(f), enter: () => showDetail(sigunguDetail(f))})));
+  } else if (view.level === 1) {
+    $('t1').textContent = `${sidoName[view.sido]} 시군구별`; $('t2').textContent = `${sidoName[view.sido]} 읍면동 상위 15`;
+    const list = feats.filter(f => f.code2 === view.sido).sort((a, b) => val(b) - val(a));
+    bars($('p1'), list.map(f => ({label: f.name, v: val(f), click: () => goSg(f), enter: () => showDetail(sigunguDetail(f))})));
+    const all = [];
+    if (isHW()) {
+      $('t2').textContent = `${sidoName[view.sido]} 한우 농가당 두수`;
+      const avgL = feats.filter(f => f.code2 === view.sido && f.hwf > 0).map(f => ({f, v: f.hw / f.hwf})).sort((a, b) => b.v - a.v);
+      const m0 = metric; metric = 'hwavg';
+      bars($('p2'), avgL.map(r => ({label: r.f.name, v: r.v, click: () => goSg(r.f), enter: () => { metric = 'hwavg'; showDetail(sigunguDetail(r.f)); metric = m0; }})));
+      metric = m0;
+    } else {
+    list.forEach(f => (DATA.emds[f.id] || []).forEach(([n, d, fm, h]) => { const v = emdVal(fm, h); if (v > 0) all.push({n, f, v}); }));
+    all.sort((a, b) => b.v - a.v);
+    bars($('p2'), all.slice(0, 15).map(r => ({label: r.n, sub: r.f.name, v: r.v, click: () => goSg(r.f, r.n)})));
+    }
+  } else {
+    $('t1').textContent = `${view.sg.name} 읍면동별`; $('t2').textContent = `${sidoName[view.sido]} 시군구 순위`;
+    const sorted = [...emdList].sort((a, b) => b.v - a.v);
+    bars($('p1'), sorted.map(e => ({label: e.name, v: e.v, click: () => { pinned = (pinned === e ? null : e); markSel(); showContext(); }, enter: () => showDetail(emdDetail(e))})));
+    const list = feats.filter(f => f.code2 === view.sido).sort((a, b) => val(b) - val(a));
+    bars($('p2'), list.map(f => ({label: f.name, v: val(f), click: () => goSg(f), enter: () => showDetail(sigunguDetail(f))})), r => r.label === view.sg.name);
+  }
+  markSel();
+  showContext();
+
+  const unk = DATA.unknown[sp] || 0;
+  $('note').innerHTML =
+    `· 농장 수는 읍면동 단위 원본을 합산한 값입니다. 축종 구분이 "소"인 자료에는 한우·젖소·육우가 함께 들어 있습니다.<br>` +
+    (DATA.hasHead ? `· 사육 두수는 구제역 대상 "소" 두수(Grid_20220823000000000635_1)이며 소만 제공됩니다. 한우·젖소·육우를 구분하지 않으므로 한우만의 두수는 아닙니다.<br>` : '') +
+    (DATA.hasHanwoo ? `· "한우 두수"는 가축위생방역지원본부 시군별 한우 사육규모 현황(공공데이터포털 15147310, ${DATA.hwYear}년 1월 1일 기준, 연 1회 갱신)이며 시군구 단위까지만 제공됩니다. 농가 수는 정확하지만 두수에는 일부 오차가 있을 수 있다고 제공기관이 밝히고 있습니다. 구 없이 집계된 지역(광역시·고양·용인 등)은 소속 구가 같은 값으로 표시됩니다.<br>` : '') +
+    `· 시도 정보가 비어 있는 자료(농장 ${fmt(unk)}곳${DATA.hasHead && sp === '소' ? `, ${fmt(DATA.unknownH || 0)}두` : ''})는 지도에 표시되지 않았고, 세종특별자치시는 시 단위로 표시됩니다.<br>` +
+    `· 읍면동 경계는 행정동 기준이라, 시 지역의 일부 법정동 자료(전체의 약 4%)는 읍면동 지도에 나타나지 않고 시군구 합계에만 포함됩니다.<br>` +
+    `· 출처: 농식품 공공데이터 포털 지역별 농장 통계 오픈API(Grid_20220824000000000642_1), 데이터 받은 날 ${DATA.meta.fetched}. 경계는 통계청 2018년 행정구역 기준이라 이후 개편된 지역은 실제와 다를 수 있습니다.`;
+}
+
+
+applyView();
+</script>
+</body>
+</html>

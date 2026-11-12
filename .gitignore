@@ -1,0 +1,9 @@
+# 인증키 — 절대 올리지 않음
+*.env
+.env
+# 받은 원본 자료·임시 파일
+data/
+__pycache__/
+.claude/
+# 글꼴·색 시험용 화면
+hanwoo_map_styles.html
