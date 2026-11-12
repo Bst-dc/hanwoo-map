@@ -70,9 +70,11 @@ svg#map text{pointer-events:none;text-anchor:middle;dominant-baseline:central;fi
 .detail .meta{color:var(--muted);font-size:.85rem}
 .detail ol{margin:8px 0 0;padding-left:20px;font-size:.9rem}
 .detail li{display:flex;justify-content:space-between;gap:12px;padding:1px 0}
-h3{margin:0 0 8px;font-size:.95rem}
-.bars{display:grid;gap:3px;max-height:420px;overflow:auto}
-.bar{display:grid;grid-template-columns:104px 1fr 62px;align-items:center;gap:8px;font-size:.82rem;cursor:pointer;padding:1px 3px;border-radius:6px}
+h3,h2.lh{margin:0 0 8px;font-size:.95rem}
+/* 막대 목록: 이름 칸은 가장 긴 이름에 맞추고(최대 9.5em) 남는 폭을 모두 막대에 준다 */
+.bars{display:grid;grid-template-columns:fit-content(9.5em) minmax(24px,1fr) max-content;gap:3px 8px;align-content:start;max-height:420px;overflow:auto}
+.bar{grid-column:1/-1;display:grid;grid-template-columns:subgrid;align-items:center;font-size:.82rem;cursor:pointer;padding:1px 3px;border-radius:6px}
+@supports not (grid-template-columns:subgrid){.bar{grid-template-columns:7em minmax(24px,1fr) 4.6em;gap:8px}}
 .bar:hover,.bar.sel{background:var(--bg)}
 .bar.sel .l{font-weight:700}
 .bar .t{height:9px;background:var(--r4);border-radius:5px;min-width:2px}
@@ -118,8 +120,8 @@ h3{margin:0 0 8px;font-size:.95rem}
     <div class="side">
       <div class="card detail" id="detail"></div>
       <div class="two">
-        <div class="card"><h3 id="t1"></h3><div class="bars" id="p1"></div></div>
-        <div class="card"><h3 id="t2"></h3><div class="bars" id="p2"></div></div>
+        <div class="card"><h2 class="lh" id="t1"></h2><div class="bars" id="p1"></div></div>
+        <div class="card"><h2 class="lh" id="t2"></h2><div class="bars" id="p2"></div></div>
       </div>
     </div>
   </div>
@@ -360,7 +362,7 @@ function legend(br, hi, scope, lo0 = 1) {
 function bars(el, rows, selFn) {
   const max = Math.max(1, ...rows.map(r => r.v));
   el.innerHTML = rows.map((r, i) =>
-    `<div class="bar${selFn && selFn(r) ? ' sel' : ''}" data-i="${i}"><span class="l">${r.label}${r.sub ? ` <small style="color:var(--muted)">${r.sub}</small>` : ''}</span><span><div class="t" style="width:${r.v / max * 100}%"></div></span><span class="n">${fv(r.v)}</span></div>`).join('');
+    `<div class="bar${selFn && selFn(r) ? ' sel' : ''}" data-i="${i}"><span class="l">${r.label}${r.sub ? ` <small style="color:var(--muted)">${r.sub}</small>` : ''}</span><span>${r.v > 0 ? `<div class="t" style="width:${r.v / max * 100}%"></div>` : ''}</span><span class="n">${fv(r.v)}</span></div>`).join('');
   el.querySelectorAll('.bar').forEach(b => {
     const r = rows[+b.dataset.i];
     if (r.click) b.addEventListener('click', r.click);
@@ -384,11 +386,11 @@ function sizeTable(list) {
   const rows = sizeSum(list), F = rows.reduce((a, r) => a + r[1], 0), H = rows.reduce((a, r) => a + r[2], 0);
   if (!F) return '';
   const pf = r => r[1] / F * 100, ph = r => r[2] / H * 100;
-  const mf = Math.max(...rows.map(pf)), mh = Math.max(...rows.map(ph));
+  const m = Math.max(...rows.map(pf), ...rows.map(ph));   // 농가·두수 막대를 같은 눈금으로 (길이를 서로 비교할 수 있게)
   return `<h3 style="margin-top:14px">사육 규모별 한우 농가</h3>
     <div class="szl"><span><i style="background:var(--r5)"></i>농가 수 비중</span><span><i style="background:var(--r2)"></i>두수 비중</span></div>` +
     rows.map(r => `<div class="sz"><b>${r[0]}</b>
-      <div class="b"><i style="width:${pf(r) / mf * 100}%;background:var(--r5)"></i><i style="width:${ph(r) / mh * 100}%;background:var(--r2)"></i></div>
+      <div class="b"><i style="width:${pf(r) / m * 100}%;background:var(--r5)"></i><i style="width:${ph(r) / m * 100}%;background:var(--r2)"></i></div>
       <div class="n">${fmt(r[1])}호 <small>${pf(r).toFixed(1)}%</small><br><small>${fmt(r[2])}두 ${ph(r).toFixed(1)}%</small></div></div>`).join('');
 }
 
@@ -448,7 +450,6 @@ function showContext() {
   if (view.level === 0 && isHW()) {
     const F = feats.reduce((a, f) => a + (f.hfs || 0), 0), H = feats.reduce((a, f) => a + (f.hs || 0), 0);
     showDetail(`<h2>전국</h2>
-      <div class="big">${fv(aggFeats(feats))}<span style="font-size:1rem;font-weight:500;color:var(--ink)"> ${UNIT()}</span></div>
       <div class="meta">한우 농가 ${fmt(F)}호 · 사육 ${fmt(H)}두 · 농가당 ${(H / F).toFixed(1)}두 · ${DATA.hwYear}년 1월 1일 기준</div>
       ${sizeTable(feats)}
       <div class="meta" style="margin-top:8px">시도를 누르면 그 시도의 규모별 농가가 보입니다</div>`);
@@ -562,7 +563,7 @@ function render() {
 
   // 오른쪽 목록
   if (view.level === 0) {
-    $('t1').textContent = `시도별 ${MLABEL[metric]} (눌러서 확대)`; $('t2').textContent = '시군구 상위 15';
+    $('t1').textContent = `시도별 ${MLABEL[metric]}`; $('t2').textContent = '시군구 상위 15';
     const groups = {}; feats.forEach(f => (groups[f.code2] = groups[f.code2] || []).push(f));
     const rows = Object.entries(groups).map(([k, l]) => ({label: sidoName[k], v: aggFeats(l), click: () => goSido(k)})).sort((a, b) => b.v - a.v);
     bars($('p1'), rows);
