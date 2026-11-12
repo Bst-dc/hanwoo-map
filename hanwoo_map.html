@@ -535,11 +535,11 @@ function render() {
   // 요약 지표
   let kScope, kTotal, kCount, kUnit, kTop;
   if (view.level === 0) {
-    const arr = feats.filter(f => val(f) > 0).sort((a, b) => val(b) - val(a));
-    kScope = '전국'; kTotal = aggFeats(feats); kCount = arr.length; kUnit = '시군구'; kTop = arr[0] ? [arr[0].name, val(arr[0])] : ['-', 0];
+    const arr = rankList(feats).filter(f => val(f) > 0).sort((a, b) => val(b) - val(a));
+    kScope = '전국'; kTotal = aggFeats(feats); kCount = arr.length; kUnit = '시군구'; kTop = arr[0] ? [rankName(arr[0]), val(arr[0])] : ['-', 0];
   } else if (view.level === 1) {
-    const arr = feats.filter(f => f.code2 === view.sido && val(f) > 0).sort((a, b) => val(b) - val(a));
-    kScope = sidoName[view.sido]; kTotal = aggFeats(feats.filter(f => f.code2 === view.sido)); kCount = arr.length; kUnit = '시군구'; kTop = arr[0] ? [arr[0].name, val(arr[0])] : ['-', 0];
+    const arr = rankList(feats.filter(f => f.code2 === view.sido && val(f) > 0)).sort((a, b) => val(b) - val(a));
+    kScope = sidoName[view.sido]; kTotal = aggFeats(feats.filter(f => f.code2 === view.sido)); kCount = arr.length; kUnit = '시군구'; kTop = arr[0] ? [rankName(arr[0]), val(arr[0])] : ['-', 0];
   } else {
     const arr = [...emdList].filter(e => e.v > 0).sort((a, b) => b.v - a.v);
     kScope = view.sg.name; kTotal = val(view.sg); kCount = arr.length; kUnit = '읍면동'; kTop = arr[0] ? [arr[0].name, arr[0].v] : ['-', 0];
