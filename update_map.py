@@ -1,4 +1,4 @@
-"""사육지도 갱신: 최신 한우 자료를 받아 hanwoo_map.html 을 다시 만듭니다.
+"""한우 사육지도 갱신: 최신 한우 자료를 받아 hanwoo_map.html 을 다시 만듭니다.
 
 실행:   python update_map.py        (또는 update_map.bat 더블클릭)
 옵션:   --offline   API 호출 없이, 이미 받아 둔 data/ 의 자료로만 지도를 다시 만듭니다.

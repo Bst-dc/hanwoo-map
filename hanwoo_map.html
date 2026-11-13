@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>사육지도</title>
+<title>한우 사육지도</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -120,7 +120,7 @@ h3,h2.lh{margin:0 0 8px;font-size:.95rem}
 <body>
 <div class="wrap">
   <header>
-    <div><h1>사육지도</h1><div class="asof" id="asof"></div></div>
+    <div><h1>한우 사육지도</h1><div class="asof" id="asof"></div></div>
     <div class="controls">
       <span class="seg" id="metricSeg" role="group" aria-label="한우 지표">
         <button data-m="hw" title="한우 사육 두수 (KOSIS 분기, 시군구)">한우 두수</button><button data-m="hwfarm" title="한우 농가(농장) 수 (KOSIS 분기)">한우 농가</button><button data-m="hwavg" title="한우 농가 1호당 두수">농가당 두수</button><button data-m="calf" title="한육우 중 1세 미만(송아지) 비중 (KOSIS 분기)">송아지 비중</button><button data-m="big" title="100두 이상 농가가 키우는 두수 비중 (공공데이터포털 15147310, 연 1회)">100두+ 비중</button>
@@ -132,7 +132,7 @@ h3,h2.lh{margin:0 0 8px;font-size:.95rem}
   <div class="grid">
     <div class="card">
       <div class="crumbbar" id="crumbs"></div>
-      <svg id="map" role="img" aria-label="사육 지도">
+      <svg id="map" role="img" aria-label="한우 사육 지도">
         <g id="regions"></g><g id="emdLayer"></g><path class="prov" id="borders"></path><g id="labels"></g><g id="inset"></g>
       </svg>
       <div class="legend" id="legend"></div>
@@ -639,11 +639,9 @@ function render() {
   showContext();
 
   $('note').innerHTML = [
-    `· 한우 두수·농가 수: KOSIS 가축동향조사 ${qLabel(LASTQ)}(${qDate(LASTQ)} 기준, 분기 자료). 구 없이 집계된 시·광역시는 각 구에 같은 값으로 표시하고 합계에는 한 번만 넣습니다.`,
-    `· 송아지 비중: 한육우(한우+육우) 중 1세 미만의 비율. 비율·평균 지표의 순위와 색 구간에서는 한우 1,000두 미만 지역을 뺍니다. 규모별 농가는 전국·시도가 KOSIS, 시군구와 "100두+ 비중"은 공공데이터포털 15147310(${DATA.hwYear}.1.1 기준, 연 1회)이라 시점과 합계가 서로 다르며, KOSIS 두수와 20% 넘게 어긋나는 지역(강원 등)은 표시하지 않습니다.`,
-    `· 읍면동에서는 "한우 두수"만 국립환경과학원 ${DATA.emdHwYear}년 자료(가축분뇨 배출시설 신고 기반)로 보입니다. 신고 누락 등으로 시군구 합계(KOSIS)와 다를 수 있고, 이름이 경계와 맞지 않는 법정동(약 5%)은 시군구 합계에만 들어갑니다.`,
-    `· 다른 한우 지표는 시군구까지입니다. 군위군은 대구 편입(2023) 이후 KOSIS가 대구에 합쳐서 집계합니다.`,
-    `· 출처: KOSIS 가축동향조사, 국립환경과학원 축산계, 공공데이터포털 15147310 · 받은 날 ${DATA.meta.fetched} · 경계 통계청 2018년(이후 개편된 지역은 실제와 다를 수 있음).`
+    `· 한우 두수·농가: KOSIS 가축동향조사 ${qLabel(LASTQ)}(${qDate(LASTQ)} 기준). 구 없이 집계된 시는 각 구에 같은 값, 합계엔 한 번만.`,
+    `· 송아지 비중은 한육우 중 1세 미만. 비율 지표 순위는 한우 1,000두 미만 지역 제외. 시군구 규모별·100두+ 비중은 15147310(${DATA.hwYear}.1.1)이며 KOSIS와 20% 넘게 다른 지역(강원 등)은 숨김.`,
+    `· 읍면동 두수: 환경과학원 ${DATA.emdHwYear}(신고 기준, 법정동 약 5%는 시군구에만). 군위군은 KOSIS가 대구에 포함. 경계는 통계청 2018년.`
   ].join('<br>');
 }
 
