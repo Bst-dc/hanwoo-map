@@ -75,7 +75,17 @@ def test_nier_real():
     print(f"  {year}년 {total:,}두 · 읍면동 연결 {matched / total:.1%}")
 
 
+def test_disease_status():
+    """질병 현황 요약: 구조·단계 범위·개인정보(농장명) 없음."""
+    d = json.loads(um.DISEASE.read_text(encoding="utf-8"))
+    assert d["asof"] and len(d["gauges"]) == 3
+    assert all(g["level"] in (1, 2, 3) and g["basis"] in ("official", "screen") for g in d["gauges"])
+    assert d["recent"] and all({"d", "dis", "sp", "loc"} == set(r) for r in d["recent"]), "최근 발생은 날짜·질병·축종·시군만"
+    assert [r["d"] for r in d["recent"]] == sorted((r["d"] for r in d["recent"]), reverse=True), "최신순"
+    assert d["sources"] and all(s["url"].startswith("https://") for s in d["sources"])
+
+
 if __name__ == "__main__":
-    for fn in (test_synthetic, test_real_data, test_nier_synthetic, test_nier_real):
+    for fn in (test_synthetic, test_real_data, test_nier_synthetic, test_nier_real, test_disease_status):
         fn()
         print("통과:", fn.__name__)

@@ -22,6 +22,7 @@ BASE = Path(__file__).resolve().parent
 DATA_DIR = BASE / "data"
 ARCHIVE = DATA_DIR / "archive"
 HW_RAW = DATA_DIR / "hanwoo_scale.csv"   # 시군별 한우 사육규모 (공공데이터포털 15147310)
+DISEASE = BASE / "disease_status.json"   # 가축질병 위기경보·최근 발생 지역 (수동 갱신 요약)
 NIER_RAW = DATA_DIR / "nier_hanwoo.csv"   # 읍면동별 한우 두수 (국립환경과학원 축산계, 공공데이터포털 15057699)
 KOSIS_FILES = {k: DATA_DIR / f"kosis_{k}.csv" for k in ("hanwoo", "age", "scale")}   # KOSIS 가축동향조사(분기)
 GEO = BASE / "map_geo.json"
@@ -251,7 +252,7 @@ def nier_units(rows, geo):
     return (rows[0]["YEAR"] if rows else None), dict(heads), lost
 
 
-def build_data(geo, fetched, hw_rows, kosis, nier=None):
+def build_data(geo, fetched, hw_rows, kosis, nier=None, disease=None):
     key_of, code_of, feats = {}, {}, []
     for g in geo["feats"]:
         key_of[g["id"]] = (g["sidoFull"], g["name"].replace(" ", ""))
@@ -296,6 +297,7 @@ def build_data(geo, fetched, hw_rows, kosis, nier=None):
         "kq": kq, "kScale": k_scale, "kReport": k_report,
         "hwYear": hw_year, "hwUnlinked": hw_unlinked,
         "meta": {"fetched": fetched},
+        "disease": disease,
     }
 
 
@@ -339,7 +341,8 @@ def main():
     hw_rows = read_csv(HW_RAW) if HW_RAW.exists() else None
     kosis = kosis_units(geo, *(read_csv(KOSIS_FILES[k]) for k in ("hanwoo", "age", "scale")))
     nier = nier_units(read_csv(NIER_RAW), geo) if NIER_RAW.exists() else None
-    data = build_data(geo, fetched, hw_rows, kosis, nier)
+    disease = json.loads(DISEASE.read_text(encoding="utf-8")) if DISEASE.exists() else None
+    data = build_data(geo, fetched, hw_rows, kosis, nier, disease)
 
     html = TEMPLATE.read_text(encoding="utf-8").replace(
         "__DATA__", json.dumps(data, ensure_ascii=False, separators=(",", ":")))
@@ -360,6 +363,9 @@ def main():
         for f in hidden:
             by[f["sido"]] += 1
         print(f"[알림] 규모별 자료(15147310)가 KOSIS와 크게 달라 ⚠ 경고를 붙인 지역 {len(hidden)}곳: {dict(by)}")
+    if disease:
+        age = (datetime.date.today() - datetime.date.fromisoformat(disease["asof"])).days
+        print(f"가축질병 현황: 기준일 {disease['asof']} ({age}일 전)" + (" — 오래됐습니다. 'Claude에게 질병 현황 갱신해줘'" if age >= 3 else ""))
     er = data["emdHwReport"]
     if data["hasEmdHw"] and er["total"]:
         print(f"읍면동 한우({data['emdHwYear']}년, 환경과학원): 합계 {er['total']:,}두 중 읍면동에 연결 {er['matched'] / er['total']:.1%} "
