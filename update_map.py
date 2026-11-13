@@ -31,6 +31,7 @@ RAW = DATA_DIR / "farms_raw.csv"
 HEAD_SERVICE = "Grid_20220823000000000635_1"
 HEAD_RAW = DATA_DIR / f"{HEAD_SERVICE}.csv"
 HW_RAW = DATA_DIR / "hanwoo_scale.csv"   # 시군별 한우 사육규모 (공공데이터포털 15147310)
+KOSIS_FILES = {k: DATA_DIR / f"kosis_{k}.csv" for k in ("hanwoo", "age", "scale")}   # KOSIS 가축동향조사(분기)
 GEO = BASE / "map_geo.json"
 TEMPLATE = BASE / "map_template.html"
 OUT = BASE / "hanwoo_map.html"
@@ -165,6 +166,84 @@ def hanwoo_units(hw_rows, geo):
     return year, out, unlinked
 
 
+KOSIS_SIDO_GROUP = {"21", "22", "23", "24", "25", "26", "29"}   # 구 없이 시도 하나로 집계되는 광역시·세종
+KOSIS_BINS = ["20 미만", "20~50 미만", "50~100 미만", "100 이상"]
+
+
+def _kv(v):
+    return int(float(v)) if v not in ("", None) else None
+
+
+def kosis_units(geo, hw_rows, age_rows, scale_rows):
+    """KOSIS 가축동향조사(분기) 한우 자료를 지도의 시군구 조각에 연결합니다.
+
+    지역 연결: KOSIS 시도 코드(앞 2자리)는 지도 경계와 같고, 시군 코드는 달라서 '시도 코드 + 시군 이름'으로 잇습니다
+    (고성군처럼 이름이 같은 지역도 시도로 구분). 구 없이 집계된 곳(광역시·고양·청주 등)은 소속 구가 같은 값을 갖고
+    대표 구(kr=1) 하나만 합계에 들어갑니다.
+    반환: (quarters, {feat id: 필드}, 시도·전국 규모표, 연결 보고)
+    """
+    quarters = sorted({r["PRD_DE"] for r in hw_rows})
+    qi = {q: i for i, q in enumerate(quarters)}
+    names = {r["C1"]: r["C1_NM"] for r in sorted(hw_rows, key=lambda r: r["PRD_DE"])}
+
+    def series(rows, itm):
+        s = defaultdict(lambda: [None] * len(quarters))
+        for r in rows:
+            if r["ITM_ID"] == itm and r["PRD_DE"] in qi and r.get("C2", "") in ("", "0"):
+                s[r["C1"]][qi[r["PRD_DE"]]] = _kv(r["DT"])
+        return s
+
+    heads, farms = series(hw_rows, "T02"), series(hw_rows, "T01")
+    calf, tot = series(age_rows, "T02"), series(age_rows, "T01")
+    by_pre = defaultdict(list)
+    for g in geo["feats"]:
+        by_pre[g["id"][:2]].append(g)
+    last = len(quarters) - 1
+    yoy = qi.get(f"{int(quarters[-1][:4]) - 1}{quarters[-1][4:]}")
+
+    def at(arr, k):
+        return (arr[k] or 0) if k is not None and k >= 0 else 0
+
+    out, unlinked = {}, []
+    for code in sorted(heads, key=lambda c: (len(c) != 5, c)):      # 시군(5자리)을 시도 행보다 먼저
+        if code == "00" or not any(v is not None for v in heads[code]):
+            continue
+        pre, name = code[:2], names[code].replace(" ", "")
+        pool = by_pre.get(pre, [])
+        if len(code) == 2:
+            if pre not in KOSIS_SIDO_GROUP:
+                continue
+            members, group = pool, (pool[0]["sidoFull"] if pool else None)
+        else:
+            members, group = [g for g in pool if g["name"].replace(" ", "") == name], None
+            if not members:
+                members = [g for g in pool if g["name"].replace(" ", "").startswith(name)]
+                group = name if members else None
+        members = [g for g in members if g["id"] not in out]
+        if not members:
+            unlinked.append((code, names[code], heads[code][last]))
+            continue
+        h, f = heads[code], farms.get(code, [None] * len(quarters))
+        y, t2 = calf.get(code, [None] * len(quarters)), tot.get(code, [None] * len(quarters))
+        for i, g in enumerate(members):
+            rep_ = 1 if i == 0 else 0
+            out[g["id"]] = {
+                "kh": h, "kf": f, "ky": y, "kt": t2, "kg": group, "kr": rep_,
+                "hw": at(h, last), "hwf": at(f, last), "hwp": at(h, yoy), "hwq": at(h, last - 1),
+                "hs": at(h, last) * rep_, "hfs": at(f, last) * rep_, "hps": at(h, yoy) * rep_,
+                "hqs": at(h, last - 1) * rep_, "hg": group,
+            }
+
+    scale = {}
+    for r in scale_rows:
+        if r["C2_NM"] in KOSIS_BINS and r["PRD_DE"] in qi:
+            sc = scale.setdefault(r["C1"], [{"f": [None] * len(quarters), "h": [None] * len(quarters)} for _ in KOSIS_BINS])
+            sc[KOSIS_BINS.index(r["C2_NM"])]["f" if r["ITM_ID"] == "T01" else "h"][qi[r["PRD_DE"]]] = _kv(r["DT"])
+    report = {"national": (heads["00"][last] if "00" in heads else None), "unlinked": unlinked,
+              "linked": len(out), "groupedFeats": sum(1 for v in out.values() if v["kg"])}
+    return quarters, out, scale, report
+
+
 def make_resolver(geo):
     """자료의 시군구 이름이 2018 경계에 없을 때(옛 행정구역) 경계 쪽 시군구로 바꿔 주는 함수를 만듭니다.
 
@@ -202,7 +281,7 @@ def make_resolver(geo):
     return resolve
 
 
-def build_data(rows, head_rows, geo, fetched, hw_rows=None):
+def build_data(rows, head_rows, geo, fetched, hw_rows=None, kosis=None):
     resolve = make_resolver(geo)
     farms = defaultdict(lambda: defaultdict(int))   # (시도, 시군구, 읍면동) -> 축종 -> 농장 수
     sg_sp = defaultdict(lambda: defaultdict(int))   # (시도, 시군구) -> 축종 -> 농장 수
@@ -265,6 +344,16 @@ def build_data(rows, head_rows, geo, fetched, hw_rows=None):
         hw_year, hw_map, hw_unlinked = hanwoo_units(hw_rows, geo)
         for ft in feats:
             ft.update(hw_map.get(ft["id"], {}))
+    kq, k_scale, k_report = None, {}, None
+    if kosis:
+        # KOSIS 분기 자료가 한우의 주 자료. 15147310(연간)은 규모 5구간(hb)과 100두 이상 비중용 '참고'로 둔다
+        kq, k_units, k_scale, k_report = kosis
+        empty = {"hw": 0, "hwf": 0, "hwp": 0, "hwq": 0, "hs": 0, "hfs": 0, "hps": 0, "hqs": 0, "hg": None}
+        for ft in feats:
+            old = {k: ft.pop(k) for k in ("hw", "hwf", "hwp", "hs", "hfs", "hps", "hg") if k in ft}
+            ft.update({"ohw": old.get("hw", 0), "ohwf": old.get("hwf", 0), "ohs": old.get("hs", 0),
+                       "ohfs": old.get("hfs", 0), "ohg": old.get("hg")})
+            ft.update(k_units.get(ft["id"], empty))
 
     emds, used, used_h = {}, set(), set()
     for c5, lst in geo["emds"].items():
@@ -303,7 +392,8 @@ def build_data(rows, head_rows, geo, fetched, hw_rows=None):
         "emds": emds,
         "unmatched": {k: dict(v) for k, v in unmatched.items()},
         "hasHead": has_head,
-        "hasHanwoo": bool(hw_map),
+        "hasHanwoo": bool(hw_map) or bool(kq),
+        "kq": kq, "kScale": k_scale, "kReport": k_report,
         "hwYear": hw_year,
         "hwUnlinked": hw_unlinked,
         "unknownH": unknown_h,
@@ -338,6 +428,16 @@ def main():
             print("[경고] 두수 자료를 새로 받지 못해, 이전에 받아 둔 두수 자료를 사용합니다.")
         else:
             print("[경고] 두수 자료가 없어 농장 수만 표시합니다.")
+        print("\nKOSIS 한우 분기 자료를 받는 중...")
+        try:
+            import fetch_kosis
+            fetch_kosis.main([])
+            for k, p in KOSIS_FILES.items():
+                shutil.copyfile(p, ARCHIVE / f"kosis_{k}_{fetched}.csv")
+        except SystemExit as e:
+            print(f"[경고] KOSIS 분기 자료를 새로 받지 못했습니다: {e}")
+            if KOSIS_FILES["hanwoo"].exists():
+                print("       이전에 받아 둔 자료를 사용합니다.")
         print("\n한우 사육규모 자료를 받는 중...")
         try:
             import fetch_hanwoo
@@ -352,7 +452,12 @@ def main():
     head_rows = read_csv(HEAD_RAW) if HEAD_RAW.exists() else None
     geo = json.loads(GEO.read_text(encoding="utf-8"))
     hw_rows = read_csv(HW_RAW) if HW_RAW.exists() else None
-    data = build_data(rows, head_rows, geo, fetched, hw_rows)
+    kosis = None
+    if all(p.exists() for p in KOSIS_FILES.values()):
+        kosis = kosis_units(geo, *(read_csv(KOSIS_FILES[k]) for k in ("hanwoo", "age", "scale")))
+    else:
+        print("[경고] KOSIS 분기 자료(data/kosis_*.csv)가 없어 기존 연간 한우 자료만 표시합니다. fetch_kosis.py 를 먼저 실행하세요.")
+    data = build_data(rows, head_rows, geo, fetched, hw_rows, kosis)
 
     html = TEMPLATE.read_text(encoding="utf-8").replace(
         "__DATA__", json.dumps(data, ensure_ascii=False, separators=(",", ":")))
@@ -373,6 +478,14 @@ def main():
         print(f"한우 사육 두수({data['hwYear']}년 기준): {tot:,}두")
         for u in data["hwUnlinked"]:
             print(f"[알림] 지도와 연결하지 못한 한우 자료: {u[0]} {u[1]} {u[2]:,}두")
+    kr = data.get("kReport")
+    if kr:
+        sg = sum(f.get("hs", 0) for f in data["feats"])
+        q = data["kq"][-1]
+        print(f"KOSIS 한우 {q[:4]}년 {q[4:].lstrip('0')}분기: 지도 합계 {sg:,}두 / KOSIS 전국 {kr['national']:,}두 "
+              f"(차이 {kr['national'] - sg:+,}두, {abs(kr['national'] - sg) / kr['national']:.1%}) · 연결 {kr['linked']}조각")
+        for c, n, v in kr["unlinked"]:
+            print(f"[알림] 지도와 연결하지 못한 KOSIS 지역: {n}({c}) {v or 0:,}두")
     for k, cnt in sorted(data["oldNames"].items()):
         print(f"[알림] 옛 행정구역 이름 연결: {k} ({cnt}건)")
     print("브라우저에서 hanwoo_map.html 을 새로고침(Ctrl+F5)하세요.")
