@@ -68,13 +68,14 @@ svg#map path.prov{fill:none;stroke:var(--sido);stroke-width:3.2px;stroke-linejoi
 svg#map #emdLayer{transition:opacity .4s}
 svg#map .odot{cursor:pointer}
 svg#map .odot circle{vector-effect:non-scaling-stroke}
-svg#map .odot .core{fill:#ff3b30;stroke:#fff;stroke-width:2.2px;animation:dotblink 1.3s ease-in-out infinite}
-svg#map .odot .ring{fill:#e5473f;transform-box:fill-box;transform-origin:center;animation:dotping 1.3s ease-out infinite}
+svg#map .odot .core{fill:var(--c);stroke:#fff;stroke-width:2.2px;animation:dotblink 1.3s ease-in-out infinite}
+svg#map .odot .ring{fill:var(--c);transform-box:fill-box;transform-origin:center;animation:dotping 1.3s ease-out infinite}
 @keyframes dotblink{0%,100%{opacity:1}50%{opacity:.45}}
 @keyframes dotping{0%{transform:scale(.7);opacity:.55}100%{transform:scale(2.8);opacity:0}}
 @media (prefers-reduced-motion:reduce){svg#map .odot .core,svg#map .odot .ring{animation:none}svg#map .odot .ring{opacity:.25}}
-.dotnote{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:.78rem;color:var(--muted)}
-.dotnote i{width:9px;height:9px;border-radius:50%;background:#e5473f;flex:none}
+.dotnote{display:flex;align-items:center;flex-wrap:wrap;gap:4px 12px;margin-top:8px;font-size:.78rem;color:var(--muted)}
+.dotnote span{display:inline-flex;align-items:center;gap:5px}
+.dotnote i{width:10px;height:10px;border-radius:50%;background:var(--c);flex:none;box-shadow:0 0 0 1.5px #fff,0 0 0 2.5px rgba(31,42,28,.25)}
 svg#map text.sidolbl{font-weight:800;letter-spacing:-.02em}
 svg#map text{pointer-events:none;text-anchor:middle;dominant-baseline:central;fill:var(--ink);stroke:var(--panel);stroke-linejoin:round;paint-order:stroke;font-weight:700}
 .legend{margin-top:12px;font-size:.78rem;color:var(--muted)}
@@ -148,7 +149,7 @@ h3,h2.lh{margin:0 0 8px;font-size:.95rem}
 .g1 .bs.screen{background:#e6e1d2;color:#3f3a2a}
 .rl{list-style:none;margin:0;padding:0;font-size:.86rem}
 .rl li{display:grid;grid-template-columns:10px 3.2em auto minmax(0,1fr);gap:6px;align-items:baseline;padding:4px 0;border-top:1px solid var(--line)}
-.rl .dot{width:9px;height:9px;border-radius:50%;align-self:center;background:#e5473f;animation:blink 1.3s ease-in-out infinite}
+.rl .dot{width:9px;height:9px;border-radius:50%;align-self:center;background:var(--c,#e5473f);animation:blink 1.3s ease-in-out infinite}
 .rl .dot.off{background:transparent;animation:none}
 @keyframes blink{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(244,131,125,.6)}50%{opacity:.3;box-shadow:0 0 0 6px rgba(244,131,125,0)}}
 @media (prefers-reduced-motion:reduce){.rl .dot{animation:none}}
@@ -692,6 +693,8 @@ function drawSidoLabels() {
 /* ---------- 최근 발생 지역: 지도 위 깜빡이는 붉은 점 (disease_status.json 의 recent, 30일 이내) ---------- */
 const SIDO2 = {'서울': ['11'], '부산': ['21'], '대구': ['22'], '인천': ['23'], '광주': ['24'], '대전': ['25'], '울산': ['26'], '세종': ['29'],
   '경기': ['31'], '강원': ['32'], '충북': ['33'], '충남': ['34'], '전북': ['35'], '전남': ['36'], '전남광주': ['36', '24'], '경북': ['37'], '경남': ['38'], '제주': ['39']};
+const DIS = {fmd: ['구제역', '#e5473f'], ai: ['AI', '#7b3fb8'], asf: ['ASF', '#f08a00'], lsd: ['럼피스킨', '#1b78d6'], tb: ['결핵병', '#d6338f'], etc: ['기타', '#4a4a4a']};
+const disKey = s => /구제역/.test(s) ? 'fmd' : /AI|조류/.test(s) ? 'ai' : /ASF|아프리카/.test(s) ? 'asf' : /럼피스킨/.test(s) ? 'lsd' : /결핵/.test(s) ? 'tb' : 'etc';
 const DOT_ALIAS = {'애월': '제주시'};     // 읍면 이름으로 적힌 곳은 속한 시로
 function outbreakSpots() {
   const D = DATA.disease, spots = new Map();
@@ -706,7 +709,7 @@ function outbreakSpots() {
         const f = [n, n + '군', n + '시', n + '구'].map(x => c.find(g => g.name === x)).find(Boolean) || c.find(g => g.name.startsWith(n + '시'));
         if (!f) return;
         if (!spots.has(f.id)) spots.set(f.id, {f, items: []});
-        spots.get(f.id).items.push(`${md(r.d)} ${r.dis} (${r.sp})`);
+        spots.get(f.id).items.push({k: disKey(r.dis), txt: `${md(r.d)} ${r.dis} (${r.sp})`});
       });
     });
   });
@@ -727,19 +730,23 @@ function drawDots() {
   const spots = view.level === 2 ? [] : outbreakSpots();
   note.hidden = !spots.length;
   if (!spots.length) return;
-  note.innerHTML = `<i></i><span>깜빡이는 붉은 점: 최근 30일 안에 가축질병이 발생한 시군 (${spots.length}곳) · 점에 마우스를 올리면 내용이 보입니다</span>`;
+  const used = [...new Set(spots.flatMap(s => s.items.map(i => i.k)))].sort((x, y) => Object.keys(DIS).indexOf(x) - Object.keys(DIS).indexOf(y));
+  note.innerHTML = used.map(k => `<span style="--c:${DIS[k][1]}"><i></i>${DIS[k][0]}</span>`).join('') + `<span>최근 30일 발생 시군 ${spots.length}곳 · 점에 마우스를 올리면 내용이 보입니다</span>`;
   const k = Math.min(svg.clientWidth / box.w, svg.clientHeight / box.h) || 1, r = 8 / k;
   spots.forEach(({f, items}) => {
-    const [x, y] = innerPoint(f.el);
-    const el = document.createElementNS(NS, 'g');
-    el.setAttribute('class', 'odot');
-    el.innerHTML = `<circle class="ring" cx="${x}" cy="${y}" r="${r}"/><circle class="core" cx="${x}" cy="${y}" r="${r * .7}"/>`;
-    const html = `<b>${f.sido} ${f.name}</b><br>${items.join('<br>')}`;
-    el.addEventListener('mouseenter', ev => tip(ev, html));
-    el.addEventListener('mousemove', ev => tip(ev, html));
-    el.addEventListener('mouseleave', tipOff);
-    el.addEventListener('click', () => f.el.dispatchEvent(new MouseEvent('click', {bubbles: true})));
-    g.appendChild(el);
+    const [x0, y0] = innerPoint(f.el), kinds = [...new Set(items.map(i => i.k))];
+    const html = `<b>${f.sido} ${f.name}</b><br>${items.map(i => `<span style="color:${DIS[i.k][1]}">●</span> ${i.txt}`).join('<br>')}`;
+    kinds.forEach((kd, n) => {
+      const x = x0 + (n - (kinds.length - 1) / 2) * r * 1.9, y = y0;
+      const el = document.createElementNS(NS, 'g');
+      el.setAttribute('class', 'odot'); el.style.setProperty('--c', DIS[kd][1]);
+      el.innerHTML = `<circle class="ring" cx="${x}" cy="${y}" r="${r}"/><circle class="core" cx="${x}" cy="${y}" r="${r * .7}"/>`;
+      el.addEventListener('mouseenter', ev => tip(ev, html));
+      el.addEventListener('mousemove', ev => tip(ev, html));
+      el.addEventListener('mouseleave', tipOff);
+      el.addEventListener('click', () => f.el.dispatchEvent(new MouseEvent('click', {bubbles: true})));
+      g.appendChild(el);
+    });
   });
 }
 function drawLabels() {
@@ -815,7 +822,7 @@ function renderAlert() {
     </div>
     <div>
       <div class="ah"><h2>최근 발생 지역</h2><small>시군 단위 · 방역 참고용</small><small class="lg"><i></i>발생 30일 이내</small></div>
-      <ul class="rl">${D.recent.slice(0, 6).map(r => `<li><i class="dot${isFresh(r.d) ? '' : ' off'}" ${isFresh(r.d) ? 'role="img" aria-label="발생 30일 이내"' : 'aria-hidden="true"'}></i><span class="d">${md(r.d)}</span><span class="k ${cls[r.dis] || ''}">${r.dis}</span><span class="l">${r.loc} <small>${r.sp}</small></span></li>`).join('')}</ul>
+      <ul class="rl">${D.recent.slice(0, 6).map(r => `<li><i class="dot${isFresh(r.d) ? '' : ' off'}" style="--c:${DIS[disKey(r.dis)][1]}" ${isFresh(r.d) ? 'role="img" aria-label="발생 30일 이내"' : 'aria-hidden="true"'}></i><span class="d">${md(r.d)}</span><span class="k ${cls[r.dis] || ''}">${r.dis}</span><span class="l">${r.loc} <small>${r.sp}</small></span></li>`).join('')}</ul>
     </div>`;
   el.hidden = false;
 }
