@@ -131,7 +131,14 @@ h3,h2.lh{margin:0 0 8px;font-size:.95rem}
 .g1 .bs{display:inline-block;font-size:.76rem;font-weight:700;border-radius:999px;padding:1px 9px;margin-top:4px;background:#cfe9d6;color:#123d26}
 .g1 .bs.screen{background:#e6e1d2;color:#3f3a2a}
 .rl{list-style:none;margin:0;padding:0;font-size:.86rem}
-.rl li{display:grid;grid-template-columns:3.2em auto minmax(0,1fr);gap:6px;align-items:baseline;padding:4px 0;border-top:1px solid var(--line)}
+.rl li{display:grid;grid-template-columns:10px 3.2em auto minmax(0,1fr);gap:6px;align-items:baseline;padding:4px 0;border-top:1px solid var(--line)}
+.rl .dot{width:9px;height:9px;border-radius:50%;align-self:center;background:#f4837d;animation:blink 1.3s ease-in-out infinite}
+.rl .dot.off{background:transparent;animation:none}
+@keyframes blink{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(244,131,125,.6)}50%{opacity:.3;box-shadow:0 0 0 6px rgba(244,131,125,0)}}
+@media (prefers-reduced-motion:reduce){.rl .dot{animation:none}}
+.alert .ah .lg{display:inline-flex;align-items:center;gap:5px}
+.alert .ah .lg i{width:8px;height:8px;border-radius:50%;background:#f4837d;animation:blink 1.3s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.alert .ah .lg i{animation:none}}
 .rl li:first-child{border-top:0}
 .rl .d{color:#33422f;font-weight:600;font-variant-numeric:tabular-nums}
 .rl .k{font-weight:700;white-space:nowrap}
@@ -723,6 +730,8 @@ function gaugeSvg(level, name) {
   const [nx, ny] = pt([-60, 0, 60][level - 1], 36);
   return `<svg viewBox="0 -2 120 68" role="img" aria-label="${name} 위기경보 ${LVNAME[level]}">${arc(-88, -31, '#2fb0ee', level === 1)}${arc(-29, 29, '#f2b807', level === 2)}${arc(31, 88, '#dc3a33', level === 3)}${lbl(-60, '관심', '#0a6aa1', level === 1)}${lbl(0, '주의', '#7a5a00', level === 2)}${lbl(60, '심각', '#a3201a', level === 3)}<line x1="${cx}" y1="${cy}" x2="${f1(nx)}" y2="${f1(ny)}" stroke="#2b3a42" stroke-width="3.4" stroke-linecap="round"/><circle cx="${cx}" cy="${cy}" r="6" fill="#fff" stroke="#2b3a42" stroke-width="2.4"/></svg>`;
 }
+const FRESH_DAYS = 30;       // 발생 후 이 기간(일) 동안만 깜빡이는 표시
+const isFresh = (d, now = Date.now()) => { const age = (now - new Date(d + 'T00:00:00')) / 864e5; return age >= 0 && age <= FRESH_DAYS; };
 function renderAlert() {
   const D = DATA.disease, el = $('alert');
   if (!D) return;
@@ -736,8 +745,8 @@ function renderAlert() {
       <div class="src">${D.lumpy} · 출처: ${D.sources.map(s => `<a href="${s.url}" target="_blank" rel="noopener noreferrer">${s.name}</a>`).join(' · ')}</div>
     </div>
     <div>
-      <div class="ah"><h2>최근 발생 지역</h2><small>시군 단위 · 방역 참고용</small></div>
-      <ul class="rl">${D.recent.slice(0, 6).map(r => `<li><span class="d">${md(r.d)}</span><span class="k ${cls[r.dis] || ''}">${r.dis}</span><span class="l">${r.loc} <small>${r.sp}</small></span></li>`).join('')}</ul>
+      <div class="ah"><h2>최근 발생 지역</h2><small>시군 단위 · 방역 참고용</small><small class="lg"><i></i>발생 30일 이내</small></div>
+      <ul class="rl">${D.recent.slice(0, 6).map(r => `<li><i class="dot${isFresh(r.d) ? '' : ' off'}" ${isFresh(r.d) ? 'role="img" aria-label="발생 30일 이내"' : 'aria-hidden="true"'}></i><span class="d">${md(r.d)}</span><span class="k ${cls[r.dis] || ''}">${r.dis}</span><span class="l">${r.loc} <small>${r.sp}</small></span></li>`).join('')}</ul>
     </div>`;
   el.hidden = false;
 }
