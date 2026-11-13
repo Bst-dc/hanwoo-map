@@ -16,6 +16,42 @@
   --r0:#2e2358; --r1:#5a2b86; --r2:#8a2f8f; --r3:#c13b82; --r4:#e8575f; --r5:#f98d43; --r6:#fbd24d;
   --radius:12px; --shadow:0 0 0 1px rgba(255,255,255,.02); --maplift:none;
 }
+/* 시안: ?style=paper | hanwoo | pasture | navy | viridis */
+:root[data-style="paper"]{
+  --fh:var(--fb);
+  --bg:#f4f1ea; --panel:#fffdf8; --ink:#25221d; --muted:#7a7468; --line:#e2dccf;
+  --sea:#e9eef0; --nodata:#ece7dc; --stroke:#fffdf8; --prov:#8a8576; --accent:#b4321f;
+  --r0:#f7e6d3; --r1:#f1c9a5; --r2:#e8a36f; --r3:#d9773f; --r4:#bb4f24; --r5:#8e3418; --r6:#5e2210;
+  --radius:12px; --shadow:0 1px 2px rgba(60,50,30,.08); --maplift:inset 0 0 0 1px #e2dccf;
+}
+:root[data-style="hanwoo"]{
+  --fh:var(--fb);
+  --bg:#17110d; --panel:#211812; --ink:#f3e9dc; --muted:#a99886; --line:#33261d;
+  --sea:#120d0a; --nodata:#2a1f17; --stroke:#17110d; --prov:#7b624d; --accent:#f0b25a;
+  --r0:#3b2417; --r1:#5e3519; --r2:#85481c; --r3:#aa5f22; --r4:#cf7d2d; --r5:#eaa24a; --r6:#f7cd7f;
+  --radius:12px; --shadow:0 0 0 1px rgba(255,255,255,.02); --maplift:none;
+}
+:root[data-style="pasture"]{
+  --fh:var(--fb);
+  --bg:#eef3ea; --panel:#fbfdf8; --ink:#1f2a1c; --muted:#6b7a64; --line:#d9e3d2;
+  --sea:#e3edf0; --nodata:#e6ebe0; --stroke:#fbfdf8; --prov:#7f9276; --accent:#2f7d3a;
+  --r0:#eef6e3; --r1:#d3e8b8; --r2:#a9d48b; --r3:#78b862; --r4:#4a9a4a; --r5:#2c7a3d; --r6:#155329;
+  --radius:12px; --shadow:0 1px 2px rgba(30,60,30,.08); --maplift:inset 0 0 0 1px #d9e3d2;
+}
+:root[data-style="navy"]{
+  --fh:var(--fb);
+  --bg:#0a1220; --panel:#101a2e; --ink:#e8eef9; --muted:#8393b0; --line:#1e2c47;
+  --sea:#070d18; --nodata:#16233a; --stroke:#0a1220; --prov:#4d6590; --accent:#6cc4ff;
+  --r0:#16305c; --r1:#1d4a85; --r2:#2a6bb0; --r3:#3f8fd0; --r4:#66b2e6; --r5:#9ed0f2; --r6:#d3ecfb;
+  --radius:12px; --shadow:0 0 0 1px rgba(255,255,255,.03); --maplift:none;
+}
+:root[data-style="viridis"]{
+  --fh:var(--fb);
+  --bg:#0e1219; --panel:#161c27; --ink:#e9edf3; --muted:#8c97a9; --line:#242d3d;
+  --sea:#0b0f15; --nodata:#1a2230; --stroke:#0e1219; --prov:#5b6c88; --accent:#fde725;
+  --r0:#440154; --r1:#443983; --r2:#31688e; --r3:#21918c; --r4:#35b779; --r5:#90d743; --r6:#fde725;
+  --radius:12px; --shadow:0 0 0 1px rgba(255,255,255,.02); --maplift:none;
+}
 *{box-sizing:border-box}
 html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font-family:var(--fb);line-height:1.5;transition:background .3s,color .3s}
@@ -105,8 +141,15 @@ h3,h2.lh{margin:0 0 8px;font-size:.95rem}
 }
 .note{font-size:.78rem;color:var(--muted);margin-top:18px;line-height:1.6}
 .empty{color:var(--muted);font-size:.9rem}
-.trend{display:block;width:100%;height:46px}
-.trl{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted);margin-top:2px}
+.tchart{position:relative;height:58px;margin:8px 0 0 62px;cursor:crosshair}
+.tchart svg{display:block;width:100%;height:100%}
+.tchart .ty{position:absolute;left:-62px;font-size:.7rem;color:var(--muted);font-variant-numeric:tabular-nums;line-height:1;transform:translateY(-50%)}
+.tchart .tdot,.tchart .tcur i{position:absolute;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;background:var(--r5);box-shadow:0 0 0 2px var(--panel)}
+.tchart .tcur{position:absolute;top:0;bottom:0;width:0;border-left:1px dashed var(--prov);display:none}
+.tchart .tcur i{left:0}
+.tyr{position:relative;height:16px;margin-left:62px;font-size:.7rem;color:var(--muted)}
+.tyr span{position:absolute;top:2px;transform:translateX(-50%);font-variant-numeric:tabular-nums}
+.tread{font-size:.8rem;font-variant-numeric:tabular-nums;margin-top:2px;min-height:1.3em}
 .szl{display:flex;gap:14px;font-size:.75rem;color:var(--muted);margin:0 0 4px}
 .szl i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .sz{display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:10px;align-items:center;padding:5px 0;border-top:1px solid var(--line);font-size:.8rem}
@@ -153,6 +196,7 @@ h3,h2.lh{margin:0 0 8px;font-size:.95rem}
 
 <script>
 const DATA = __DATA__;
+try { const s = new URLSearchParams(location.search).get('style'); if (s) document.documentElement.dataset.style = s; } catch (e) {}
 const fmt = n => Number(n).toLocaleString('ko-KR');
 const $ = id => document.getElementById(id);
 const NS = 'http://www.w3.org/2000/svg';
@@ -457,13 +501,35 @@ function ksizeTable(pre) {      // 전국('00')·시도(앞 두 자리) 규모�
 function trendBlock(s, note = '') {
   const pts = s.map((v, i) => [i, v]).filter(p => p[1] != null);
   if (pts.length < 2) return '';
-  const W = 300, H = 46, lo = Math.min(...pts.map(p => p[1])), hi = Math.max(...pts.map(p => p[1])), n = s.length - 1;
-  const X = i => 3 + i / n * (W - 6), Y = v => hi === lo ? H / 2 : 4 + (hi - v) / (hi - lo) * (H - 8);
-  const a = pts[0], b = pts[pts.length - 1];
+  const lo = Math.min(...pts.map(p => p[1])), hi = Math.max(...pts.map(p => p[1])), n = s.length - 1;
+  const X = i => i / n * 100, Y = v => hi === lo ? 50 : 10 + (hi - v) / (hi - lo) * 80;      // 퍼센트 좌표
+  const b = pts[pts.length - 1];
+  const years = DATA.kq.map((q, i) => [q, i]).filter(([q]) => q.endsWith('01'));
   return `<h3 style="margin-top:14px">분기별 한우 사육 두수</h3>
-    <svg class="trend" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${qLabel(DATA.kq[a[0]])} ${fmt(a[1])}두에서 ${qLabel(DATA.kq[b[0]])} ${fmt(b[1])}두"><polyline points="${pts.map(p => X(p[0]).toFixed(1) + ',' + Y(p[1]).toFixed(1)).join(' ')}" fill="none" stroke="var(--r5)" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>
-    <div class="trl"><span>${qLabel(DATA.kq[a[0]])} ${fmt(a[1])}</span><span>${qLabel(DATA.kq[b[0]])} ${fmt(b[1])}</span></div>${note ? `<div class="meta" style="font-size:.75rem">${note}</div>` : ''}`;
+    <div class="tchart" data-s="${s.map(v => v == null ? '' : v).join(',')}" data-hi="${hi}" data-lo="${lo}">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="${qLabel(DATA.kq[pts[0][0]])} ${fmt(pts[0][1])}두에서 ${qLabel(DATA.kq[b[0]])} ${fmt(b[1])}두"><line x1="0" x2="100" y1="${Y(hi)}" y2="${Y(hi)}" stroke="var(--line)" stroke-width="1" vector-effect="non-scaling-stroke" stroke-dasharray="3 3"/><line x1="0" x2="100" y1="${Y(lo)}" y2="${Y(lo)}" stroke="var(--line)" stroke-width="1" vector-effect="non-scaling-stroke" stroke-dasharray="3 3"/><polyline points="${pts.map(p => X(p[0]).toFixed(2) + ',' + Y(p[1]).toFixed(2)).join(' ')}" fill="none" stroke="var(--r5)" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>
+      <span class="ty" style="top:${Y(hi)}%">${fmt(hi)}</span><span class="ty" style="top:${Y(lo)}%">${fmt(lo)}</span>
+      <i class="tdot" style="left:${X(b[0])}%;top:${Y(b[1])}%"></i>
+      <div class="tcur"><i></i></div>
+    </div>
+    <div class="tyr">${years.map(([q, i]) => `<span style="left:${X(i)}%">${q.slice(0, 4)}</span>`).join('')}</div>
+    <div class="tread" data-default="${qLabel(DATA.kq[b[0]])} · ${fmt(b[1])}두 (최근)">${qLabel(DATA.kq[b[0]])} · ${fmt(b[1])}두 (최근)</div>${note ? `<div class="meta" style="font-size:.75rem">${note}</div>` : ''}`;
 }
+/* 추이 그래프: 마우스를 올리면 그 분기의 연도·분기·두수를 아래에 보여 준다 */
+let tChart = null;
+document.addEventListener('mousemove', ev => {
+  const c = ev.target.closest ? ev.target.closest('.tchart') : null;
+  if (tChart && tChart !== c) { tChart.querySelector('.tcur').style.display = 'none'; tChart.parentElement.querySelector('.tread').textContent = tChart.parentElement.querySelector('.tread').dataset.default; tChart = null; }
+  if (!c) return;
+  tChart = c;
+  const s = c.dataset.s.split(',').map(v => v === '' ? null : +v), r = c.getBoundingClientRect();
+  const idx = Math.max(0, Math.min(s.length - 1, Math.round((ev.clientX - r.left) / r.width * (s.length - 1))));
+  if (s[idx] == null) return;
+  const hi = +c.dataset.hi, lo = +c.dataset.lo, cur = c.querySelector('.tcur');
+  cur.style.display = 'block'; cur.style.left = (idx / (s.length - 1) * 100) + '%';
+  cur.querySelector('i').style.top = (hi === lo ? 50 : 10 + (hi - s[idx]) / (hi - lo) * 80) + '%';
+  c.parentElement.querySelector('.tread').textContent = `${qLabel(DATA.kq[idx])} · ${fmt(s[idx])}두`;
+});
 
 function hwDetail(f) {
   const v = val(f);
