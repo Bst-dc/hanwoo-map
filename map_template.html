@@ -208,7 +208,7 @@ h3,h2.lh{margin:0 0 8px;font-size:.95rem}
     <div><h1>한우 사육 및 질병 발생 현황</h1><div class="asof" id="asof"></div></div>
     <div class="controls">
       <span class="seg" id="metricSeg" role="group" aria-label="한우 지표">
-        <button data-m="hw" title="한우 사육 두수 (KOSIS 분기, 시군구)">한우 두수</button><button data-m="hwfarm" title="한우 농가(농장) 수 (KOSIS 분기)">한우 농가</button><button data-m="hwavg" title="한우 농가 1호당 두수">농가당 두수</button><button data-m="calf" title="한육우 중 1세 미만(송아지) 비중 (KOSIS 분기)">송아지 비중</button><button data-m="big" title="100두 이상 농가가 키우는 두수 비중 (공공데이터포털 15147310, 연 1회)">100두+ 비중</button>
+        <button data-m="hw" title="한우 사육 두수 (KOSIS 분기, 시군구)">한우 두수</button><button data-m="hwfarm" title="한우 농가(농장) 수 (KOSIS 분기)">한우 농가</button><button data-m="hwavg" title="한우 농가 1호당 두수">농가당 두수</button><button data-m="calf" title="한육우 중 1세 미만(송아지) 비중 (KOSIS 분기)">송아지 비중</button><button data-m="big" title="100두 이상 규모 농가 수 (시군구: 공공데이터포털 15147310 연 1회, 시도·전국: KOSIS 분기)">100두+ 농가</button>
       </span>
     </div>
   </header>
@@ -260,35 +260,39 @@ const feats = DATA.feats;
 feats.forEach(f => { f.code2 = f.id.slice(0, 2); });
 const byId = {}; feats.forEach(f => byId[f.id] = f);
 const sidoName = {}; feats.forEach(f => sidoName[f.code2] = f.sido);
-let metric = 'hw';          // hw 두수 · hwfarm 농가 수 · hwavg 농가당 · calf 송아지 비중 · big 100두+ 비중
+let metric = 'hw';          // hw 두수 · hwfarm 농가 수 · hwavg 농가당 · calf 송아지 비중 · big 100두+ 농가 수
 let wantMetric = metric;    // 사용자가 마지막으로 고른 지표 (읍면동 층에서는 한우 두수만 쓸 수 있어 잠시 바뀌어도 기억)
 const lastV = a => (a && a.length ? a[a.length - 1] : 0) || 0;
 const calfOf = f => lastV(f.kt) > 0 ? lastV(f.ky) / lastV(f.kt) * 100 : 0;
 const binSum = b => b.reduce((a, x) => a + x[2], 0);
-const bigOf = f => { const b = f.hb || [], t = binSum(b); return t > 0 ? b[0][2] / t * 100 : 0; };
+const bigOf = f => ((f.hb || [])[0] || [0, 0, 0])[1];          // 100두 이상 규모 농가 수(호), 15147310
+const kBig = pre => { const sc = (DATA.kScale || {})[pre]; return sc && sc[3] ? lastV(sc[3].f) : 0; };   // 시도·전국 100두 이상 농가 수: KOSIS
 const val = f => metric === 'hw' ? (f.hw || 0) : metric === 'hwfarm' ? (f.hwf || 0) : metric === 'hwavg' ? (f.hwf > 0 ? f.hw / f.hwf : 0)
   : metric === 'calf' ? calfOf(f) : bigOf(f);
-const ONE = () => ['hwavg', 'calf', 'big'].includes(metric);       // 소수 한 자리로 보이는 지표
+const ONE = () => ['hwavg', 'calf'].includes(metric);       // 소수 한 자리로 보이는 지표
 const fv = n => ONE() ? Number(n).toFixed(1) : fmt(n);
-const UNIT = () => ({hw: '두', hwfarm: '호', hwavg: '두/호', calf: '%', big: '%'}[metric]);
+const UNIT = () => ({hw: '두', hwfarm: '호', hwavg: '두/호', calf: '%', big: '호'}[metric]);
 const TIPU = UNIT;
-const KU = () => ({hw: '두', hwfarm: '호', hwavg: '두', calf: '%', big: '%'}[metric]);
-const MLABEL = {hw: '한우 사육 두수', hwfarm: '한우 농가 수', hwavg: '한우 농가당 두수', calf: '송아지(1세 미만) 비중', big: '100두 이상 농가의 두수 비중'};
-const KLAB = {hw: '한우 사육 두수', hwfarm: '한우 농가 수', hwavg: '한우 농가당 평균 두수', calf: '한육우 중 1세 미만 비중', big: '100두 이상 농가의 두수 비중'};
+const KU = () => ({hw: '두', hwfarm: '호', hwavg: '두', calf: '%', big: '호'}[metric]);
+const MLABEL = {hw: '한우 사육 두수', hwfarm: '한우 농가 수', hwavg: '한우 농가당 두수', calf: '송아지(1세 미만) 비중', big: '100두 이상 농가 수'};
+const KLAB = {hw: '한우 사육 두수', hwfarm: '한우 농가 수', hwavg: '한우 농가당 평균 두수', calf: '한육우 중 1세 미만 비중', big: '100두 이상 농가 수'};
 // 구 없이 집계된 시(청주시·광역시 등)는 소속 구마다 같은 값이 들어 있어, 합계·순위에는 대표 구 하나만 넣고 시 이름으로 보여 준다
 // (big 은 공공데이터포털 15147310 의 묶음 기준, 나머지는 KOSIS 의 묶음 기준)
 const grpOf = f => metric === 'big' ? f.ohg : f.hg;
 const repOf = f => !grpOf(f) || (metric === 'big' ? f.ohs > 0 : f.kr === 1);
 // 비율·평균 지표는 한우가 1,000두 미만인 지역(과천시 4두 등)이 1위를 차지하지 않도록 순위·색 구간에서 뺀다
-const thin = f => ['hwavg', 'calf', 'big'].includes(metric) && (f.hw || 0) < 1000;
+const thin = f => (['hwavg', 'calf'].includes(metric) && (f.hw || 0) < 1000) || (metric === 'big' && f.obOk === false);
 const rankList = list => list.filter(f => repOf(f) && !thin(f));
 const rankName = f => (grpOf(f) || f.name) + (metric === 'big' && f.obOk === false ? ' ⚠' : '');
 const aggFeats = list => {
-  // 100두+ 비중: 경고 지역은 합계에서 빼되, 한우의 절반 넘게 경고 지역이면(강원 시도) 전체로 계산하고 '참고용'으로 표시한다
-  const all = list.filter(repOf), okL = all.filter(f => metric !== 'big' || f.obOk !== false);
-  const rep = metric === 'big' && okL.reduce((a, f) => a + (f.hw || 0), 0) < all.reduce((a, f) => a + (f.hw || 0), 0) * 0.5 ? all : okL;
+  const all = list.filter(repOf), rep = all;
   const sum = fn => rep.reduce((a, f) => a + fn(f), 0);
-  if (metric === 'big') { const t = sum(f => binSum(f.hb || [])); return t > 0 ? sum(f => ((f.hb || [])[0] || [0, 0, 0])[2]) / t * 100 : 0; }
+  if (metric === 'big') {          // 100두 이상 농가 수: 전국·시도 전체는 KOSIS 분기 규모표(믿을 수 있는 값), 그 밖의 묶음은 시군구 합
+    const codes = new Set(list.map(f => f.code2));
+    if (codes.size === new Set(feats.map(f => f.code2)).size) return kBig('00');
+    if (codes.size === 1 && list.length === feats.filter(f => f.code2 === list[0].code2).length) return kBig(list[0].code2);
+    return sum(bigOf);
+  }
   if (metric === 'calf') { const t = sum(f => lastV(f.kt)); return t > 0 ? sum(f => lastV(f.ky)) / t * 100 : 0; }
   const d = list.reduce((a, f) => a + (f.hs || 0), 0), h = list.reduce((a, f) => a + (f.hfs || 0), 0);
   return metric === 'hw' ? d : metric === 'hwfarm' ? h : (h > 0 ? d / h : 0);
@@ -298,7 +302,7 @@ const bigNote = list => {
   const all = list.filter(repOf), bad = all.filter(f => f.obOk === false);
   if (!bad.length) return '';
   const w = all.reduce((a, f) => a + (f.hw || 0), 0), ok = all.filter(f => f.obOk !== false).reduce((a, f) => a + (f.hw || 0), 0);
-  return ok < w * 0.5 ? ' ⚠ 참고용' : ' (⚠ 지역 제외)';
+  return ` · ⚠ ${bad.length}곳은 규모 자료가 KOSIS와 크게 달라 참고용`;
 };
 /* KOSIS 분기 표시 도우미 */
 const LASTQ = DATA.kq ? DATA.kq[DATA.kq.length - 1] : null;
@@ -866,7 +870,7 @@ function render() {
   let panelVals;
 
   if (view.level < 2) {
-    feats.forEach(f => { f.el.style.fill = colorOf(cls(val(f), natBr)); });
+    feats.forEach(f => { f.el.style.fill = metric === 'big' && f.obOk === false ? 'var(--nodata)' : colorOf(cls(val(f), natBr)); });
     const pos = natVals.filter(x => x > 0);
     legend(natBr, Math.max(...natVals), (view.level === 0 ? '전국 시군구 기준 (분위수 구간)' : '전국 시군구 기준 · 지역 간 비교용') + ` · ${MLABEL[metric]}`, pos.length ? Math.min(...pos) : 1);
   } else {
@@ -880,10 +884,11 @@ function render() {
   let kScope, kTotal, kCount, kUnit, kTop, kNote = '';
   if (view.level === 0) {
     const arr = rankList(feats).filter(f => val(f) > 0).sort((a, b) => val(b) - val(a));
-    kScope = '전국'; kNote = bigNote(feats); kTotal = aggFeats(feats); kCount = arr.length; kUnit = '시군구'; kTop = arr[0] ? [rankName(arr[0]), val(arr[0])] : ['-', 0];
+    kScope = '전국'; kTotal = aggFeats(feats); kCount = arr.length; kUnit = '시군구'; kTop = arr[0] ? [rankName(arr[0]), val(arr[0])] : ['-', 0];
   } else if (view.level === 1) {
-    const arr = rankList(feats.filter(f => f.code2 === view.sido && val(f) > 0)).sort((a, b) => val(b) - val(a));
-    kScope = sidoName[view.sido]; kNote = bigNote(feats.filter(f => f.code2 === view.sido)); kTotal = aggFeats(feats.filter(f => f.code2 === view.sido)); kCount = arr.length; kUnit = '시군구'; kTop = arr[0] ? [rankName(arr[0]), val(arr[0])] : ['-', 0];
+    const inSido = feats.filter(f => f.code2 === view.sido && val(f) > 0);
+    const arr = (metric === 'big' ? inSido.filter(repOf) : rankList(inSido)).sort((a, b) => val(b) - val(a));   // 100두+ 는 ⚠ 지역도 경고와 함께 포함
+    kScope = sidoName[view.sido]; kTotal = aggFeats(feats.filter(f => f.code2 === view.sido)); kCount = arr.length; kUnit = '시군구'; kTop = arr[0] ? [rankName(arr[0]), val(arr[0])] : ['-', 0];
   } else {
     const arr = [...emdList].filter(e => e.v > 0).sort((a, b) => b.v - a.v);
     kScope = view.sg.name + ' 읍면동 합계'; kTotal = emdList.reduce((a, e) => a + e.v, 0); kCount = arr.length; kUnit = '읍면동'; kTop = arr[0] ? [arr[0].name, arr[0].v] : ['-', 0];
@@ -914,16 +919,19 @@ function render() {
 
   // 오른쪽 목록
   if (view.level === 0) {
-    $('t1').textContent = `시도별 ${MLABEL[metric]}`; $('t2').textContent = '시군구 상위 15';
+    $('t1').textContent = `시도별 ${MLABEL[metric]}`;
     const groups = {}; feats.forEach(f => (groups[f.code2] = groups[f.code2] || []).push(f));
-    const rows = Object.entries(groups).map(([k, l]) => ({label: sidoName[k], v: aggFeats(l), click: () => goSido(k)})).sort((a, b) => b.v - a.v);
-    bars($('p1'), rows);
-    const top = rankList(feats).filter(f => val(f) > 0).sort((a, b) => val(b) - val(a)).slice(0, 15);
-    bars($('p2'), top.map(f => ({label: rankName(f), sub: f.sido, v: val(f), click: () => goSg(f), enter: () => showDetail(sigunguDetail(f))})));
+    const sidoRows = () => Object.entries(groups).map(([k, l]) => ({label: sidoName[k], v: aggFeats(l), click: () => goSido(k)})).sort((a, b) => b.v - a.v);
+    bars($('p1'), sidoRows());
+    // 오른쪽 아래: 시도별 한우 사육 두수 순위 (고른 지표가 두수이면 같은 표가 되므로 농가 수로)
+    const m0 = metric; metric = m0 === 'hw' ? 'hwfarm' : 'hw';
+    $('t2').textContent = `시도별 ${MLABEL[metric]}`;
+    bars($('p2'), sidoRows());
+    metric = m0;
   } else if (view.level === 1) {
     $('t1').textContent = `${sidoName[view.sido]} 시군구별`; $('t2').textContent = `${sidoName[view.sido]} 읍면동 상위 15`;
     const list = feats.filter(f => f.code2 === view.sido).sort((a, b) => val(b) - val(a));
-    bars($('p1'), rankList(list).map(f => ({f, label: rankName(f), v: val(f), click: () => goSg(f), enter: () => showDetail(sigunguDetail(f))})));
+    bars($('p1'), (metric === 'big' ? list.filter(repOf) : rankList(list)).map(f => ({f, label: rankName(f), v: val(f), click: () => goSg(f), enter: () => showDetail(sigunguDetail(f))})));
     $('t2').textContent = `${sidoName[view.sido]} 한우 농가당 두수`;
     const avgL = rankList(feats.filter(f => f.code2 === view.sido && f.hwf > 0)).map(f => ({f, v: f.hw / f.hwf})).sort((a, b) => b.v - a.v);
     const m0 = metric; metric = 'hwavg';
@@ -943,11 +951,11 @@ function render() {
     <section class="nt"><h2>자료 출처</h2><ul>
       <li>한우 두수·농가·송아지 비중: <b>KOSIS 가축동향조사</b> ${qLabel(LASTQ)} <span class="dim">(${qDate(LASTQ)} 기준)</span></li>
       <li>읍면동 두수: <b>국립환경과학원</b> ${DATA.emdHwYear}년 <span class="dim">(신고 기준)</span></li>
-      <li>시군구 규모별·100두+ 비중: <b>공공데이터포털 15147310</b> <span class="dim">(${DATA.hwYear}.1.1 기준)</span></li>
+      <li>시군구 규모별 농가·100두+ 농가 수: <b>공공데이터포털 15147310</b> <span class="dim">(${DATA.hwYear}.1.1 기준)</span> · 시도·전국 100두+ 농가 수는 <b>KOSIS</b></li>
       <li>경계: 통계청 2018년 <span class="dim">(이후 개편 지역은 실제와 다를 수 있음)</span></li>
     </ul></section>
     <section class="nt warnbox"><h2>주의</h2><ul>
-      <li><b>⚠ 표시 지역</b>(강원 등): 규모별 자료가 KOSIS와 20% 넘게 달라 경고와 함께 보이며, 전국·시도 합계에서는 뺍니다.</li>
+      <li><b>⚠ 표시 지역</b>(강원 등): 규모별 자료가 KOSIS와 20% 넘게 달라 지도에서는 자료 없음 색으로 두고 순위에서 뺍니다(시도 화면 목록에는 경고와 함께 보임). 시도·전국 합계는 KOSIS 값을 씁니다.</li>
       <li>읍면동: 이름이 경계와 맞지 않는 법정동(약 5%)은 시군구 합계에만 들어갑니다.</li>
       <li>군위군은 2023년 7월 <b>대구로 편입</b>되어 대구에 포함해 표시합니다(경계는 편입 후 기준으로 수정).</li>
     </ul></section>`;
