@@ -233,7 +233,7 @@ const sumSeries = list => {      // 시도·전국: 대표 구만 더한 분기�
 function calcE(e) {
   e.farms = e.f[species] || 0;
   e.hd = species === '소' ? (e.h || 0) : 0;
-  e.v = metric === 'farm' ? e.farms : metric === 'head' ? e.hd : (e.farms > 0 ? e.hd / e.farms : 0);
+  e.v = metric === 'hw' ? (e.hn || 0) : metric === 'farm' ? e.farms : metric === 'head' ? e.hd : (e.farms > 0 ? e.hd / e.farms : 0);
 }
 const emdVal = (fm, h) => {
   const fa = fm[species] || 0, he = species === '소' ? (h || 0) : 0;
@@ -241,19 +241,20 @@ const emdVal = (fm, h) => {
 };
 function syncMetric() {
   const okH = !!DATA.hasHead && species === '소';
-  const okW = !!DATA.hasHanwoo && species === '소' && view.level < 2;   // 한우 자료는 시군구 단위까지
+  const okW = !!DATA.hasHanwoo && species === '소' && view.level < 2;   // 한우 KOSIS 자료는 시군구 단위까지
+  const okE = !!DATA.hasEmdHw && species === '소' && view.level === 2;  // 읍면동은 환경과학원 한우 두수만
   // 사용자가 고른 지표(wantMetric)를 쓸 수 있으면 그것으로 되돌린다
   // (시군구 안으로 들어가 한우 → 두수로 바뀌었다가, 다시 시도·전국으로 나오면 한우로 복귀)
-  const allowed = m => m === 'farm' || (HWM.includes(m) ? okW : okH);
+  const allowed = m => m === 'farm' || (m === 'hw' ? okW || okE : HWM.includes(m) ? okW : okH);
   if (allowed(wantMetric)) metric = wantMetric;
-  else if (!allowed(metric)) metric = okH ? 'head' : 'farm';
+  else if (!allowed(metric)) metric = okE ? 'hw' : okH ? 'head' : 'farm';
   $('metricSeg').style.display = (DATA.hasHead || DATA.hasHanwoo) ? '' : 'none';
   $('sp').closest('span').style.display = isHW() ? 'none' : '';      // 축종 선택은 참고(소 전체) 지표에서만
   document.querySelectorAll('#metricSeg button').forEach(b => {
     const m = b.dataset.m;
     const hide = (m === 'head' || m === 'avg') ? !DATA.hasHead : HWM.includes(m) ? !DATA.hasHanwoo : false;
     b.style.display = hide ? 'none' : '';
-    b.disabled = m === 'farm' ? false : HWM.includes(m) ? !okW : !okH;
+    b.disabled = m === 'farm' ? false : m === 'hw' ? !(okW || okE) : HWM.includes(m) ? !okW : !okH;
     b.setAttribute('aria-pressed', m === metric);
   });
 }
@@ -414,10 +415,10 @@ function applyView(pinName) {
   const layer = $('emdLayer');
   layer.innerHTML = ''; emdList = [];
   if (view.level === 2) {
-    (DATA.emds[view.sg.id] || []).forEach(([name, d, fm, h]) => {
+    (DATA.emds[view.sg.id] || []).forEach(([name, d, fm, h, hn]) => {
       const p = document.createElementNS(NS, 'path');
       p.setAttribute('d', d); p.setAttribute('class', 'e');
-      const e = {name, f: fm, h, el: p};
+      const e = {name, f: fm, h, hn: hn || 0, el: p};
       calcE(e);
       p.addEventListener('mouseenter', () => showDetail(emdDetail(e)));
       p.addEventListener('mousemove', ev => tip(ev, `<b>${e.name}</b> ${fv(e.v)}${TIPU()}`));
@@ -533,7 +534,7 @@ function hwDetail(f) {
      ${chg ? `<div class="meta">${chg}</div>` : ''}${calfTxt}
      ${hasB ? sizeTable([f]) : ''}
      ${grpOf(f) ? `<div class="meta" style="margin-top:8px">※ 이 자료는 ${grpOf(f)} 전체를 한 덩어리로 집계해서, 소속 구가 모두 같은 값으로 표시됩니다.</div>` : ''}
-     <div class="meta" style="margin-top:8px">${view.level === 0 ? '눌러서 해당 시도로 확대' : '읍면동 한우 자료는 없어 소 전체(2022, 참고)로 보여 드립니다'}</div>`
+     <div class="meta" style="margin-top:8px">${view.level === 0 ? '눌러서 해당 시도로 확대' : '눌러서 읍면동 한우 두수 보기(환경조사 ' + DATA.emdHwYear + ')'}</div>`
     : `<div class="meta" style="margin-top:6px">한우 자료가 없습니다.${f.name === '군위군' ? ' 군위군은 2023년 대구 편입 이후 KOSIS가 대구광역시에 합쳐서 집계합니다.' : ''}</div>`);
 }
 
@@ -557,6 +558,14 @@ function sigunguDetail(f) {
 }
 function emdDetail(e) {
   const f = view.sg;
+  if (metric === 'hw') {          // 읍면동 한우 두수 (국립환경과학원)
+    const tot = emdList.reduce((a, x) => a + x.v, 0), rank = emdList.filter(x => x.v > e.v).length + 1;
+    return `<h2>${f.sido} ${f.name} ${e.name}</h2>` + (e.v > 0 ?
+      `<div class="big">${fmt(e.v)}<span style="font-size:1rem;font-weight:500;color:var(--ink)"> 두</span></div>
+       <div class="meta">한우 · ${f.name} 읍면동 ${fmt(emdList.filter(x => x.v > 0).length)}곳 중 ${rank}위 · ${f.name} 읍면동 합계 대비 ${(e.v / tot * 100).toFixed(1)}%</div>
+       <div class="meta" style="font-size:.75rem">국립환경과학원 ${DATA.emdHwYear}년 · 가축분뇨 배출시설 신고 기반</div>`
+      : `<div class="meta" style="margin-top:6px">한우 자료가 없습니다. (환경조사에 신고된 한우가 없거나 이름이 맞지 않는 읍면동)</div>`);
+  }
   const rank = emdList.filter(x => x.v > e.v).length + 1;
   const share = metric === 'avg'
     ? `${f.name} 평균 ${(emdList.reduce((a, x) => a + x.farms, 0) > 0 ? emdList.reduce((a, x) => a + x.hd, 0) / emdList.reduce((a, x) => a + x.farms, 0) : 0).toFixed(1)}두`
@@ -593,6 +602,21 @@ function showContext() {
     showDetail(emdDetail(pinned));
   } else {
     const f = view.sg;
+    if (metric === 'hw') {
+      const tot = emdList.reduce((a, x) => a + x.v, 0), un2 = (DATA.unmatchedN || {})[f.id] || 0;
+      // 비교는 전체끼리: 환경조사 합계(이름이 안 맞는 두수 포함, 구 없이 집계된 시는 소속 구 전부) vs KOSIS 값
+      const emdSum = x => (DATA.emds[x.id] || []).reduce((a, r) => a + (r[4] || 0), 0) + ((DATA.unmatchedN || {})[x.id] || 0);
+      const cmpTot = (f.hg ? feats.filter(x => x.hg === f.hg && x.code2 === f.code2).reduce((a, x) => a + emdSum(x), 0) : emdSum(f))
+        + (f.hg === '대구광역시' ? emdSum(feats.find(x => x.name === '군위군')) : 0);   // KOSIS 대구에는 군위군이 들어 있음
+      const share = f.hw > 0 ? cmpTot / f.hw * 100 : 0;
+      showDetail(`<h2>${f.sido} ${f.name}</h2>
+        <div class="big">${fmt(tot)}<span style="font-size:1rem;font-weight:500;color:var(--ink)"> 두</span></div>
+        <div class="meta">한우 · 읍면동 ${emdList.length}곳 · 국립환경과학원 ${DATA.emdHwYear}년</div>
+        <div class="meta">${f.hg ? f.hg + ' 전체 ' : ''}환경조사 ${fmt(cmpTot)}두 · KOSIS ${qLabel(LASTQ)} ${fmt(f.hw)}두의 ${share.toFixed(0)}%${f.hw > 0 && (share < 85 || share > 115) ? ' — 두 자료가 크게 달라 읍면동 값은 참고용' : ''}</div>
+        <h3 style="margin-top:12px">읍면동 상위</h3>${topList([...emdList].sort((a, b) => b.v - a.v).slice(0, 5).filter(e => e.v > 0).map(e => [e.name, e.v]))}
+        ${un2 > 0 ? `<div class="meta" style="margin-top:8px">이름이 경계와 달라 읍면동에 표시하지 못한 ${fmt(un2)}두 (시군구 합계에만 포함)</div>` : ''}`);
+      return;
+    }
     const un = metric === 'farm' ? ((DATA.unmatched[f.id] || {})[species] || 0) : (species === '소' ? ((DATA.unmatchedH || {})[f.id] || 0) : 0);
     const top = [...emdList].sort((a, b) => b.v - a.v).slice(0, 5).filter(e => e.v > 0);
     showDetail(`<h2>${f.sido} ${f.name}</h2>
@@ -658,7 +682,7 @@ function render() {
     const br = breaks(emdList.map(e => e.v));
     emdList.forEach(e => { e.el.style.fill = colorOf(cls(e.v, br)); });
     const pos = emdList.map(e => e.v).filter(x => x > 0);
-    legend(br, Math.max(0, ...emdList.map(e => e.v)), `${view.sg.name} 읍면동 기준 (분위수 구간) · ${MLABEL[metric]}`, pos.length ? Math.min(...pos) : 1);
+    legend(br, Math.max(0, ...emdList.map(e => e.v)), `${view.sg.name} 읍면동 기준 (분위수 구간) · ${metric === 'hw' ? `읍면동 한우 두수(환경조사 ${DATA.emdHwYear})` : MLABEL[metric]}`, pos.length ? Math.min(...pos) : 1);
   }
 
   // 요약 지표
@@ -671,7 +695,7 @@ function render() {
     kScope = sidoName[view.sido]; kTotal = aggFeats(feats.filter(f => f.code2 === view.sido)); kCount = arr.length; kUnit = '시군구'; kTop = arr[0] ? [rankName(arr[0]), val(arr[0])] : ['-', 0];
   } else {
     const arr = [...emdList].filter(e => e.v > 0).sort((a, b) => b.v - a.v);
-    kScope = view.sg.name; kTotal = val(view.sg); kCount = arr.length; kUnit = '읍면동'; kTop = arr[0] ? [arr[0].name, arr[0].v] : ['-', 0];
+    kScope = view.sg.name + (metric === 'hw' ? ' 읍면동 합계' : ''); kTotal = metric === 'hw' ? emdList.reduce((a, e) => a + e.v, 0) : val(view.sg); kCount = arr.length; kUnit = '읍면동'; kTop = arr[0] ? [arr[0].name, arr[0].v] : ['-', 0];
   }
   $('kpis').innerHTML =
     `<div class="kpi"><span>${kScope} ${isHW() ? '' : sp + ' '}${KLAB[metric]}</span><b>${fv(kTotal)}${KU()}</b></div>` +
@@ -727,7 +751,8 @@ function render() {
   $('note').innerHTML = (LASTQ && isHW() ? [
     `· 한우 두수·농가 수: KOSIS 가축동향조사 ${qLabel(LASTQ)}(${qDate(LASTQ)} 기준, 분기 자료). 구 없이 집계된 시·광역시는 각 구에 같은 값으로 표시하고 합계에는 한 번만 넣습니다.`,
     `· 송아지 비중: 한육우(한우+육우) 중 1세 미만의 비율. 비율·평균 지표의 순위와 색 구간에서는 한우 1,000두 미만 지역을 뺍니다. 규모별 농가는 전국·시도가 KOSIS, 시군구와 "100두+ 비중"은 공공데이터포털 15147310(${DATA.hwYear}.1.1 기준, 연 1회)이라 시점과 합계가 서로 다릅니다.`,
-    `· 읍면동은 한우 자료가 없어 "참고" 지표(소 전체: 한우·젖소·육우, 2022년)로 보입니다. 군위군은 대구 편입(2023) 이후 KOSIS가 대구에 합쳐서 집계합니다.`
+    `· 읍면동에서는 "한우 두수"만 국립환경과학원 ${DATA.emdHwYear}년 자료(가축분뇨 배출시설 신고 기반)로 보입니다. 신고 누락 등으로 시군구 합계(KOSIS)와 다를 수 있고(강원은 절반 수준), 이름이 경계와 맞지 않는 법정동(약 5%)은 시군구 합계에만 들어갑니다.`,
+    `· 다른 한우 지표는 시군구까지입니다. 군위군은 대구 편입(2023) 이후 KOSIS가 대구에 합쳐서 집계합니다.`
   ] : [
     `· 참고 지표: "소"는 한우·젖소·육우를 합한 값이며 2022년 자료입니다.`,
     `· 지도 제외: 주소가 빈 자료(농장 ${fmt(unk)}곳${DATA.hasHead && sp === '소' ? `, ${fmt(DATA.unknownH || 0)}두` : ''}). 일부 법정동 자료(약 4%)는 시군구 합계에만 들어갑니다.`

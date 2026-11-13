@@ -50,7 +50,32 @@ def test_real_data():
     print(f"  전국 {rep['national']:,}두 · 지도 합계 {total:,}두({gap:.2%}) · 연결 {rep['linked']}조각 · 미연결 {[u[1] for u in rep['unlinked']]}")
 
 
+def test_nier_synthetic():
+    """극소수 시험: 신 시도명·군위군(대구로 적힘)·시 지역 법정동이 어떻게 이어지는지."""
+    geo = {"feats": [{"id": "32100", "sidoFull": "강원도", "name": "춘천시", "sido": "강원"},
+                     {"id": "37100", "sidoFull": "경상북도", "name": "군위군", "sido": "경북"}], "emds": {}}
+    rows = [{"YEAR": "2024", "CITYNM": "강원특별자치도", "CITICOUNGUNM": "춘천시", "ADIVIDOUNGNM": "동면", "HEADS": "10"},
+            {"YEAR": "2024", "CITYNM": "대구광역시", "CITICOUNGUNM": "군위군", "ADIVIDOUNGNM": "소보면", "HEADS": "7"},
+            {"YEAR": "2024", "CITYNM": "경기도", "CITICOUNGUNM": "없는시", "ADIVIDOUNGNM": "가동", "HEADS": "3"}]
+    year, heads, lost = um.nier_units(rows, geo)
+    assert year == "2024" and heads[("강원도", "춘천시", "동면")] == 10, "신 시도명이 옛 이름으로"
+    assert heads[("경상북도", "군위군", "소보면")] == 7, "대구로 적힌 군위군은 경북 군위군으로"
+    assert lost == 3, "지도에 없는 시군구는 lost 로 집계"
+
+
+def test_nier_real():
+    geo = json.loads(um.GEO.read_text(encoding="utf-8"))
+    year, heads, lost = um.nier_units(um.read_csv(um.NIER_RAW), geo)
+    total = sum(heads.values()) + lost
+    assert lost == 0, f"시군구도 못 이은 두수 {lost:,}"
+    emd_keys = {(g["sidoFull"], g["name"].replace(" ", ""), n) for g in geo["feats"] for n, _d in geo["emds"].get(g["id"], [])}
+    matched = sum(v for k, v in heads.items() if k in emd_keys)
+    assert matched / total > 0.9, f"읍면동 연결 {matched / total:.1%} (90% 이상이어야 함)"
+    assert 3_000_000 < total < 4_000_000, f"전국 합계가 이상함: {total:,}"
+    print(f"  {year}년 {total:,}두 · 읍면동 연결 {matched / total:.1%}")
+
+
 if __name__ == "__main__":
-    for fn in (test_synthetic, test_real_data):
+    for fn in (test_synthetic, test_real_data, test_nier_synthetic, test_nier_real):
         fn()
         print("통과:", fn.__name__)

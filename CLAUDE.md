@@ -8,7 +8,7 @@
 
 ## 파일
 - `update_map.py` / `update_map.bat`: 자료 3종을 받아 `hanwoo_map.html`을 다시 만든다. `--offline`은 받아 둔 data/ 로만 재생성.
-- `fetch_data.py`(농장 수), `fetch_head.py`(Grid 데이터셋 임의 다운로드), `fetch_hanwoo.py`(한우 사육규모), `fetch_kosis.py`(KOSIS 분기 한우, `--test`는 1분기만 받아 구조 확인), `test_kosis.py`(연결 점검: `python test_kosis.py`).
+- `fetch_data.py`(농장 수), `fetch_head.py`(Grid 데이터셋 임의 다운로드), `fetch_hanwoo.py`(한우 사육규모), `fetch_kosis.py`(KOSIS 분기 한우, `--test`는 1분기만 받아 구조 확인), `fetch_nier.py`(읍면동 한우 두수, 최신 연도 자동 탐색), `test_kosis.py`(KOSIS·읍면동 연결 점검: `python test_kosis.py`).
 - `map_template.html`(화면), `map_geo.json`(경계), `data_info.txt`(`기준월=YYYY-MM` 입력).
 - `data/`: 받은 CSV, `data/archive/`에 날짜별 보관.
 
@@ -25,9 +25,9 @@
 - 자료에 남은 옛 행정구역 이름은 `make_resolver`가 경계 쪽으로 옮긴다: 폐지된 구(부천시원미구→부천시), 통합된 군(청원군 읍면→읍면동 이름으로 청주시 4개 구). 시도가 빈 자료(소 369곳)는 지도·카드·축종 선택 숫자 모두에서 뺀다.
 - 지도는 vanilla JS + inline SVG 단일 파일, 구간은 7분위수.
 
-- 공공데이터포털 15057699(국립환경과학원 축산계, `apis.data.go.kr/1480523/StobrService/getStobrInfo`, 2012~2024, 읍면동·리 단위 한우 두수, 활용신청 완료): 2024 한우 3,415,540두로 전체는 맞으나 강원이 15147310의 약 47%만 들어 있음(KOSIS도 영월·강릉·정선이 약 0.48) → 15147310의 강원 값 점검 필요. 읍면동 한우 지표로 쓸 수 있으나 아직 미적용(`data/nier_livestock_2024.json`에 받아 둠, 시도명이 신 명칭이라 이름 연결 필요).
+- 읍면동 한우 두수 = 공공데이터포털 15057699(국립환경과학원 축산계, `apis.data.go.kr/1480523/StobrService/getStobrInfo`, 2012~2024, 활용신청 완료, zl2.env 키). `fetch_nier.py`가 한우만 읍면동별로 합쳐 `data/nier_hanwoo.csv`에 저장(농가수는 중복 줄이 있어 쓰지 않음). 시도 신 명칭(강원·전북 특별자치도)은 옛 이름으로, 대구로 적힌 군위군은 경북으로 옮겨 연결, 두수의 95.5%가 읍면동에 닿고 나머지(시 지역 법정동)는 시군구 합계에만. 환경조사 합계는 KOSIS 시군구 값의 약 105~111%(상주·횡성·영월·청주)로 서로 맞는다 → **15147310의 강원 값(횡성 117,668 등)이 과대**로 보이니 그 값을 그대로 믿지 말 것(규모 구간 표시에만 쓰는 중).
 
 ## 남은 일
-- 읍면동 한우(환경과학원 2024) 지표 추가, 강원 값 원인 확인.
+- 15147310 강원 값 제공기관에 확인 또는 규모 구간을 KOSIS·환경조사 기반으로 대체.
 - 경계 갱신(군위군 대구 편입, 전남광주통합특별시).
 - 선택: 638번(운영/휴업/폐업) 화면, 한우 연도별 추이(2018~2026).
