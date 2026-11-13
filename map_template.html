@@ -126,6 +126,7 @@ h3,h2.lh{margin:0 0 8px;font-size:.95rem}
 .sz .b i{display:block;height:7px;border-radius:2px;min-width:2px}
 .sz .n{text-align:right;font-variant-numeric:tabular-nums;line-height:1.35;white-space:nowrap}
 .sz .n small{color:var(--muted)}
+.info{font-size:.78rem;line-height:1.45;color:#1f4d33;background:#e6f3ea;border:1px solid #bcdcc6;border-radius:8px;padding:7px 10px;margin-top:10px}
 .warn{font-size:.78rem;line-height:1.45;color:#7a4b00;background:#fff3d6;border:1px solid #ecd49a;border-radius:8px;padding:7px 10px;margin-top:12px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -268,7 +269,7 @@ feats.forEach(f => {
   p.setAttribute('class', 'r can');
   p.id = 'r' + f.id;
   p.addEventListener('mouseenter', () => { if (canUse(f)) showDetail(sigunguDetail(f)); });
-  p.addEventListener('mousemove', ev => { if (canUse(f)) tip(ev, `<b>${f.name}</b> ${fv(val(f))}${TIPU()}`); });
+  p.addEventListener('mousemove', ev => { if (canUse(f)) tip(ev, grpOf(f) ? `<b>${grpOf(f)} 전체</b> ${fv(val(f))}${TIPU()}<br><small>구별 구분 없이 합쳐서 집계된 자료</small>` : `<b>${f.name}</b> ${fv(val(f))}${TIPU()}`); });
   p.addEventListener('mouseleave', () => { tipOff(); showContext(); });
   p.addEventListener('click', () => {
     if (view.level === 0) goSido(f.code2);
@@ -527,13 +528,15 @@ function hwDetail(f) {
   const calfTxt = lastV(f.kt) > 0 ? `<div class="meta">한육우 ${fmt(lastV(f.kt))}두 중 1세 미만 ${fmt(lastV(f.ky))}두 (${calfOf(f).toFixed(1)}%)</div>` : '';
   const hasB = (f.hb || []).some(b => b[1] > 0 || b[2] > 0);
   const warnB = f.obOk === false ? `<div class="warn">⚠ 이 지역의 규모별 자료(15147310)는 KOSIS 두수의 ${Math.round((f.obR || 0) * 100)}%로 크게 달라, 아래 농가·두수는 실제보다 크게 나올 수 있어 참고용입니다.</div>` : '';
-  return `<h2>${f.sido} ${grpOf(f) || f.name}</h2>` + (v > 0 ?
+  const n = grpOf(f) ? feats.filter(x => x.code2 === f.code2 && grpOf(x) === grpOf(f)).length : 0;
+  const grpTxt = grpOf(f) ? `<div class="info">ⓘ 이 자료는 ${grpOf(f)} 전체를 구별로 나누지 않고 <b>합쳐서</b> 집계한 값입니다. 소속 ${n}개 구·군이 모두 같은 값으로 표시되고, 합계에는 한 번만 들어갑니다. 구·군별 두수는 읍면동 화면(환경과학원 ${DATA.emdHwYear})에서 볼 수 있습니다.</div>` : '';
+  const nm = grpOf(f) || f.name;
+  return `<h2>${nm.startsWith(f.sido) ? nm : f.sido + ' ' + nm}</h2>${grpTxt}` + (v > 0 ?
     `<div class="big">${fv(v)}<span style="font-size:1rem;font-weight:500;color:var(--ink)"> ${UNIT()}</span></div>
      <div class="meta">한우 · ${where} ${fmt(has.length)}곳 중 ${rank}위 · ${share}</div>
      <div class="meta">${qLabel(LASTQ)} · 농가 ${fmt(f.hwf)}호 · 사육 ${fmt(f.hw)}두${f.hwf > 0 ? ` · 농가당 ${(f.hw / f.hwf).toFixed(1)}두` : ''}</div>
      ${chg ? `<div class="meta">${chg}</div>` : ''}${calfTxt}
      ${hasB ? warnB + sizeTable([f]) : ''}
-     ${grpOf(f) ? `<div class="meta" style="margin-top:8px">※ 이 자료는 ${grpOf(f)} 전체를 한 덩어리로 집계해서, 소속 구가 모두 같은 값으로 표시됩니다.</div>` : ''}
      <div class="meta" style="margin-top:8px">${view.level === 0 ? '눌러서 해당 시도로 확대' : '눌러서 읍면동 한우 두수 보기(환경조사 ' + DATA.emdHwYear + ')'}</div>`
     : `<div class="meta" style="margin-top:6px">한우 자료가 없습니다.${f.name === '군위군' ? ' 군위군은 2023년 대구 편입 이후 KOSIS가 대구광역시에 합쳐서 집계합니다.' : ''}</div>`);
 }
