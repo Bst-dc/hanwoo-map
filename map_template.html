@@ -116,14 +116,14 @@ h3,h2.lh{margin:0 0 8px;font-size:.95rem}
 @media (max-width:1000px){.two{grid-template-columns:1fr}}
 /* 지도 카드와 오른쪽 칸 높이 맞추기
    넓은 화면: 오른쪽 칸은 지도 카드 높이를 따르고(contain:size), 목록이 남는 높이를 채우며 안에서 스크롤.
-   상세 칸은 마우스를 올렸을 때의 높이를 미리 잡아 둬서 목록 높이가 흔들리지 않게 한다.
+   상세 칸은 가장 긴 내용(경북 시군구 등, 약 680px)에 맞춰 높이를 고정해서, 호버로 내용이 바뀌어도 아래 목록이 밀려 깜빡이지 않게 한다.
    목록이 너무 낮아지지 않게 오른쪽 칸 최소 높이 = 상세 + 16 + 240 (이보다 지도가 낮으면 지도 카드가 늘어남) */
 @media (min-width:1001px){
   .grid{align-items:stretch}
   .side{contain:size;display:flex;flex-direction:column;gap:16px;min-height:608px}
-  .side:has(.detail.hw){min-height:776px}
+  .side:has(.detail.hw){min-height:956px}
   .side .detail{flex:none}
-  .detail.hw{min-height:520px}
+  .detail.hw{height:700px;overflow:auto}     /* 높이 고정: 호버로 내용이 바뀌어도 아래 목록이 밀리지 않게 */
   .two{flex:1;min-height:0;grid-auto-rows:minmax(0,1fr)}
   .two .card{display:flex;flex-direction:column;min-height:0}
   .two .bars{flex:1;min-height:0;max-height:none}
