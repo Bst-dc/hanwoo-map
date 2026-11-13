@@ -607,7 +607,7 @@ function hwDetail(f) {
      ${chg ? `<div class="meta">${chg}</div>` : ''}${calfTxt}
      ${hasB ? warnB + sizeTable([f]) : ''}
      <div class="meta" style="margin-top:8px">${view.level === 0 ? '눌러서 해당 시도로 확대' : '눌러서 읍면동 한우 두수 보기(환경조사 ' + DATA.emdHwYear + ')'}</div>`
-    : `<div class="meta" style="margin-top:6px">한우 자료가 없습니다.${f.name === '군위군' ? ' 군위군은 2023년 대구 편입 이후 KOSIS가 대구광역시에 합쳐서 집계합니다.' : ''}</div>`);
+    : `<div class="meta" style="margin-top:6px">한우 자료가 없습니다.</div>`);
 }
 
 const sigunguDetail = hwDetail;
@@ -635,7 +635,7 @@ function showContext() {
     showDetail(`<h2>${sidoName[view.sido]}</h2>
       <div class="big">${fv(aggFeats(list))}<span style="font-size:1rem;font-weight:500;color:var(--ink)"> ${UNIT()}</span></div>
       <div class="meta">한우 · 시군구 ${list.length}곳${bigNote(list)}</div>
-      ${trendBlock(sumSeries(list), ['22', '37'].includes(view.sido) ? '※ 군위군이 2023년 7월 경북에서 대구로 편입되어, 그 전후 분기는 직접 비교할 수 없습니다.' : '') + ksizeTable(view.sido)}
+      ${trendBlock(sumSeries(list), ['22', '37'].includes(view.sido) ? '※ 군위군은 2023년 7월 경북에서 대구로 편입되어, 그 이전 분기도 지금 경계(대구에 포함) 기준으로 이어 붙였습니다.' : '') + ksizeTable(view.sido)}
       <div class="meta" style="margin-top:8px">시군구를 누르면 읍면동이 보입니다</div>`);
   } else if (pinned) {
     showDetail(emdDetail(pinned));
@@ -643,8 +643,7 @@ function showContext() {
     const f = view.sg, tot = emdList.reduce((a, x) => a + x.v, 0), un2 = (DATA.unmatchedN || {})[f.id] || 0;
     // 비교는 전체끼리: 환경조사 합계(이름이 안 맞는 두수 포함, 구 없이 집계된 시는 소속 구 전부) vs KOSIS 값
     const emdSum = x => (DATA.emds[x.id] || []).reduce((a, r) => a + (r[2] || 0), 0) + ((DATA.unmatchedN || {})[x.id] || 0);
-    const cmpTot = (f.hg ? feats.filter(x => x.hg === f.hg && x.code2 === f.code2).reduce((a, x) => a + emdSum(x), 0) : emdSum(f))
-      + (f.hg === '대구광역시' ? emdSum(feats.find(x => x.name === '군위군')) : 0);   // KOSIS 대구에는 군위군이 들어 있음
+    const cmpTot = (f.hg ? feats.filter(x => x.hg === f.hg && x.code2 === f.code2).reduce((a, x) => a + emdSum(x), 0) : emdSum(f));
     const share = f.hw > 0 ? cmpTot / f.hw * 100 : 0;
     showDetail(`<h2>${f.sido} ${f.name}</h2>
       <div class="big">${fmt(tot)}<span style="font-size:1rem;font-weight:500;color:var(--ink)"> 두</span></div>
@@ -919,7 +918,7 @@ function render() {
     <section class="nt warnbox"><h2>주의</h2><ul>
       <li><b>⚠ 표시 지역</b>(강원 등): 규모별 자료가 KOSIS와 20% 넘게 달라 경고와 함께 보이며, 전국·시도 합계에서는 뺍니다.</li>
       <li>읍면동: 이름이 경계와 맞지 않는 법정동(약 5%)은 시군구 합계에만 들어갑니다.</li>
-      <li>군위군은 KOSIS가 <b>대구에 포함</b>해 집계합니다.</li>
+      <li>군위군은 2023년 7월 <b>대구로 편입</b>되어 대구에 포함해 표시합니다(경계는 편입 후 기준으로 수정).</li>
     </ul></section>`;
 }
 

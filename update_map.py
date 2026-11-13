@@ -134,6 +134,14 @@ def kosis_units(geo, hw_rows, age_rows, scale_rows):
 
     heads, farms = series(hw_rows, "T02"), series(hw_rows, "T01")
     calf, tot = series(age_rows, "T02"), series(age_rows, "T01")
+    # 군위군은 2023.7 경북에서 대구로 편입됐다. 지도에서는 군위군이 대구 안에 있으므로, 편입 전 분기(KOSIS가 경북에 넣던 값)를
+    # 대구 계열에 더해 지금 경계 기준으로 이어 붙인다 (그렇지 않으면 대구 추이가 2023.7에 껑충 뛴다).
+    GUNWI, DAEGU = "37510", "22"
+    for ser in (heads, farms, calf, tot):
+        if GUNWI in ser and DAEGU in ser:
+            for i, v in enumerate(ser[GUNWI]):
+                if v and v > 0 and ser[DAEGU][i] is not None:
+                    ser[DAEGU][i] += v
     by_pre = defaultdict(list)
     for g in geo["feats"]:
         by_pre[g["id"][:2]].append(g)
@@ -145,7 +153,7 @@ def kosis_units(geo, hw_rows, age_rows, scale_rows):
 
     out, unlinked = {}, []
     for code in sorted(heads, key=lambda c: (len(c) != 5, c)):      # 시군(5자리)을 시도 행보다 먼저
-        if code == "00" or not any(v is not None for v in heads[code]):
+        if code in ("00", GUNWI) or not any(v is not None for v in heads[code]):   # 군위군은 위에서 대구에 합쳤다
             continue
         pre, name = code[:2], names[code].replace(" ", "")
         pool = by_pre.get(pre, [])
