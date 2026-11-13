@@ -80,7 +80,11 @@ def test_disease_status():
     d = json.loads(um.DISEASE.read_text(encoding="utf-8"))
     assert d["asof"] and len(d["gauges"]) == 3
     assert all(g["level"] in (1, 2, 3) and g["basis"] in ("official", "screen") for g in d["gauges"])
-    assert d["recent"] and all({"d", "dis", "sp", "loc"} == set(r) for r in d["recent"]), "최근 발생은 날짜·질병·축종·시군만"
+    assert d["recent"] and all({"d", "dis", "sp", "loc"} <= set(r) <= {"d", "dis", "sp", "loc", "emd"} for r in d["recent"]), "최근 발생은 날짜·질병·축종·시군(+읍면동)만"
+    import re
+    for r in d["recent"]:      # 읍면동은 '시군 읍면동' 형식만 (리·농장명·농장주는 싣지 않는다)
+        for s in r.get("emd", []):
+            assert re.fullmatch(r"\S+[시군구] \S+[읍면동]", s) and not s.endswith("리"), f"읍면동 형식 오류: {s}"
     assert [r["d"] for r in d["recent"]] == sorted((r["d"] for r in d["recent"]), reverse=True), "최신순"
     assert d["sources"] and all(s["url"].startswith("https://") for s in d["sources"])
 

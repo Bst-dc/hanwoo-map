@@ -22,7 +22,7 @@
 ## 가축질병 현황 (위기경보 게이지 + 최근 발생 지역)
 - `disease_status.json`(수동 갱신 요약)을 `update_map.py`가 지도에 끼워 넣는다. 공식 API가 없어(공공데이터포털 3055523은 KAHIS 웹 화면으로 가는 LINK형, 기존 Grid_…316은 2022 이후 멈춤) **갱신은 Claude에게 '질병 현황 갱신해줘'** 라고 시키거나, 예약 작업 `hanwoo-map-disease-status-refresh`(매일 09시·18시, Claude 앱이 켜져 있을 때 실행, 앱이 꺼져 있으면 다음 실행 때 따라잡음)가 자동으로 한다. 작업 내용은 `C:/Users/배성태/.claude/scheduled-tasks/hanwoo-map-disease-status-refresh/SKILL.md`. 기준일이 3일 넘으면 화면에 '⚠ N일 전 자료'가 뜬다.
 - 단계 읽는 법: 농식품부 위기단계 화면(https://www.mafra.go.kr/FMD-AI2/)의 바늘은 지역별 단계 중 **가장 높은 단계**로 보인다(구제역: 예천·강화 심각, 그 외 주의 → 바늘 심각). 구제역은 농식품부 보도자료로 확인(`basis: official`), AI·ASF는 화면 기준(`basis: screen`)이라 구분해 표시한다. 럼피스킨은 2026-10-01부터 제2종이라 위기경보 대상이 아니다.
-- 최근 발생은 KAHIS 법정가축전염병 발생현황(https://home.kahis.go.kr/home/lkntscrinfo/selectLkntsOccrrncList.do)에서 **시군 단위까지만** 옮긴다. 농장명(농장주 이름)은 절대 싣지 않는다(테스트가 막음). KAHIS는 '방역 목적 외 사용 금지'를 명시하므로 공개 지도에 싣는 것은 사용자 결정이며, 방역 참고용 문구를 붙였다.
+- 최근 발생은 KAHIS 법정가축전염병 발생현황(https://home.kahis.go.kr/home/lkntscrinfo/selectLkntsOccrrncList.do)에서 **시군과 읍면동까지만** 옮긴다(`recent[].loc`=시군, 선택 항목 `emd`=['시군 읍면동'] — 읍면동 확대 화면의 점에 쓴다). 리 주소·농장명(농장주 이름)은 절대 싣지 않는다(테스트가 막음). KAHIS는 농장명과 리 주소까지 가축전염병예방법 제3조의2에 따라 공개하고 있어 읍면동 표시는 그 일부다(2026-11-13 사용자 결정). `recent`는 최근 30일 안의 건을 최신순으로 두며 8~12건. KAHIS는 '방역 목적 외 사용 금지'를 명시하므로 공개 지도에 싣는 것은 사용자 결정이며, 방역 참고용 문구를 붙였다.
 
 ## 지도 기술 메모
 - 경계: 통계청 2018 (southkorea-maps). 매칭 키 = 시도 + 시군구(공백 제거) + 읍면동. 읍면동은 행정동이라 시 지역의 법정동 자료는 읍면동에 안 닿고 시군구 합계에만 들어간다.

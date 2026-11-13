@@ -714,9 +714,15 @@ function outbreakSpots() {
         const n = DOT_ALIAS[raw.trim()] || raw.trim(), c = feats.filter(f => codes.includes(f.code2));
         const f = [n, n + '군', n + '시', n + '구'].map(x => c.find(g => g.name === x)).find(Boolean) || c.find(g => g.name.startsWith(n + '시'));
         if (!f) return;
-        if (!spots.has(f.id)) spots.set(f.id, {f, items: []});
+        if (!spots.has(f.id)) spots.set(f.id, {f, items: [], emds: new Map()});
         spots.get(f.id).items.push({k: disKey(r.dis), txt: `${md(r.d)} ${r.dis} (${r.sp})`});
       });
+    });
+    (r.emd || []).forEach(s => {                  // '시군 읍면동' (KAHIS 공개 주소의 읍면동까지만, 리·농장명은 싣지 않는다)
+      const [sg, en] = s.split(' '), sp = [...spots.values()].find(x => x.f.name === sg);
+      if (!sp || !en) return;
+      if (!sp.emds.has(en)) sp.emds.set(en, []);
+      sp.emds.get(en).push({k: disKey(r.dis), txt: `${md(r.d)} ${r.dis} (${r.sp})`});
     });
   });
   return [...spots.values()];
@@ -733,15 +739,32 @@ function innerPoint(el) {                        // 경계 상자 중심이 지�
 }
 function drawDots() {
   const g = $('dots'), note = $('dotnote'); g.innerHTML = '';
-  const spots = view.level === 2 ? [] : outbreakSpots();
-  note.hidden = !spots.length;
-  if (!spots.length) return;
-  const used = [...new Set(spots.flatMap(s => s.items.map(i => i.k)))].sort((x, y) => Object.keys(DIS).indexOf(x) - Object.keys(DIS).indexOf(y));
-  note.innerHTML = used.map(k => `<span style="--c:${DIS[k][1]}"><i></i>${DIS[k][0]}</span>`).join('') + `<span>최근 30일 발생 시군 ${spots.length}곳 · 점에 마우스를 올리면 내용이 보입니다</span>`;
+  let targets = [], tail = '';
+  if (view.level === 2) {                        // 읍면동 화면: 이 시군에서 최근 발생한 읍면동에 점
+    const sp = outbreakSpots().find(s => s.f === view.sg);
+    if (sp) {
+      let miss = 0;
+      sp.emds.forEach((items, name) => {
+        const e = emdList.find(x => x.name === name);
+        if (e) targets.push({el: e.el, label: `${view.sg.sido} ${view.sg.name} ${name}`, items}); else miss++;
+      });
+      tail = sp.emds.size ? `최근 30일 이 시군 발생 읍면동 ${targets.length}곳${miss ? ` (지도에 없는 이름 ${miss}곳 제외)` : ''} · 점에 마우스를 올리면 내용이 보입니다`
+        : '이 시군의 최근 발생은 읍면동 정보가 없어 시군 단위로만 표시합니다';
+      if (!targets.length) { note.hidden = false; note.innerHTML = `<span>${tail}</span>`; return; }
+    }
+  } else {
+    targets = outbreakSpots().map(s => ({el: s.f.el, label: `${s.f.sido} ${s.f.name}`, items: s.items, f: s.f}));
+    tail = `최근 30일 발생 시군 ${targets.length}곳 · 점에 마우스를 올리면 내용이 보입니다`;
+  }
+  note.hidden = !targets.length;
+  if (!targets.length) return;
+  const used = [...new Set(targets.flatMap(s => s.items.map(i => i.k)))].sort((x, y) => Object.keys(DIS).indexOf(x) - Object.keys(DIS).indexOf(y));
+  note.innerHTML = used.map(k => `<span style="--c:${DIS[k][1]}"><i></i>${DIS[k][0]}</span>`).join('') + `<span>${tail}</span>`;
   const k = Math.min(svg.clientWidth / box.w, svg.clientHeight / box.h) || 1, r = 8 / k;
-  spots.forEach(({f, items}) => {
-    const [x0, y0] = innerPoint(f.el), kinds = [...new Set(items.map(i => i.k))];
-    const html = `<b>${f.sido} ${f.name}</b><br>${items.map(i => `<span style="color:${DIS[i.k][1]}">●</span> ${i.txt}`).join('<br>')}`;
+  targets.forEach(({el: area, label, items}) => {
+    const [x0, y00] = innerPoint(area), kinds = [...new Set(items.map(i => i.k))];
+    const y0 = view.level === 2 ? y00 - 11 / k : y00;        // 읍면동 화면은 이름 글자 위에 얹어 글자를 가리지 않게
+    const html = `<b>${label}</b><br>${items.map(i => `<span style="color:${DIS[i.k][1]}">●</span> ${i.txt}`).join('<br>')}`;
     kinds.forEach((kd, n) => {
       const x = x0 + (n - (kinds.length - 1) / 2) * r * 1.9, y = y0;
       const el = document.createElementNS(NS, 'g');
@@ -750,7 +773,7 @@ function drawDots() {
       el.addEventListener('mouseenter', ev => tip(ev, html));
       el.addEventListener('mousemove', ev => tip(ev, html));
       el.addEventListener('mouseleave', tipOff);
-      el.addEventListener('click', () => f.el.dispatchEvent(new MouseEvent('click', {bubbles: true})));
+      el.addEventListener('click', () => area.dispatchEvent(new MouseEvent('click', {bubbles: true})));
       g.appendChild(el);
     });
   });
