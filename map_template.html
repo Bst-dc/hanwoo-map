@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>한우 사육지도</title>
+<title>한우 사육 및 질병 발생 현황</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -205,7 +205,7 @@ h3,h2.lh{margin:0 0 8px;font-size:.95rem}
 <body>
 <div class="wrap">
   <header>
-    <div><h1>한우 사육지도</h1><div class="asof" id="asof"></div></div>
+    <div><h1>한우 사육 및 질병 발생 현황</h1><div class="asof" id="asof"></div></div>
     <div class="controls">
       <span class="seg" id="metricSeg" role="group" aria-label="한우 지표">
         <button data-m="hw" title="한우 사육 두수 (KOSIS 분기, 시군구)">한우 두수</button><button data-m="hwfarm" title="한우 농가(농장) 수 (KOSIS 분기)">한우 농가</button><button data-m="hwavg" title="한우 농가 1호당 두수">농가당 두수</button><button data-m="calf" title="한육우 중 1세 미만(송아지) 비중 (KOSIS 분기)">송아지 비중</button><button data-m="big" title="100두 이상 농가가 키우는 두수 비중 (공공데이터포털 15147310, 연 1회)">100두+ 비중</button>
@@ -223,7 +223,7 @@ h3,h2.lh{margin:0 0 8px;font-size:.95rem}
         <label>읍면동 <select id="selEmd" aria-label="읍면동 선택"></select></label>
       </div>
       <div class="crumbbar" id="crumbs"></div>
-      <svg id="map" role="img" aria-label="한우 사육 지도">
+      <svg id="map" role="img" aria-label="한우 사육 및 질병 발생 지도">
         <g id="regions"></g><g id="emdLayer"></g><path class="prov" id="borders"></path><g id="labels"></g><g id="inset"></g><g id="dots"></g>
       </svg>
       <div class="legend" id="legend"></div>
