@@ -51,6 +51,7 @@ svg#map{width:100%;height:auto;display:block;background:var(--sea);border-radius
 svg#map path{vector-effect:non-scaling-stroke}
 svg#map path.r,svg#map path.e{fill:var(--nodata)}      /* 색이 입혀지기 전 시작색 (기본 검정이 밝은 화면에서 번쩍이지 않게) */
 svg#map path.r{stroke:var(--stroke);stroke-width:.7px;cursor:pointer;transition:opacity .3s,fill .3s}
+svg#map path.r.pick{stroke:var(--accent);stroke-width:2.8px}
 svg#map path.r.can:hover{stroke:var(--accent);stroke-width:2px}
 svg#map path.r.off{pointer-events:none;cursor:default}
 svg#map path.e{stroke:var(--stroke);stroke-width:.9px;cursor:pointer}
@@ -178,6 +179,7 @@ const NS = 'http://www.w3.org/2000/svg';
 const svg = $('map');
 
 let view = {level: 0, sido: null, sg: null};
+let pickedSg = null;        // 선택 상자로 고른 시군구 (시도 화면에 머물며 강조)
 let pinned = null;          // 읍면동 단계에서 고정한 읍면동
 let emdList = [];           // 현재 시군구의 읍면동
 let box = null, fullBox = null, anim = 0;
@@ -368,13 +370,14 @@ function drawInset() {
 function sgBox(f) { const b = f.el.getBBox(); return pad({x: b.x, y: b.y, w: b.width, h: b.height}, .08); }
 
 /* ---------- 이동 ---------- */
-function goTop() { pinned = null; view = {level: 0, sido: null, sg: null}; applyView(); }
-function goSido(code2) { pinned = null; view = {level: 1, sido: code2, sg: null}; applyView(); }
+function goTop() { pickedSg = null; pinned = null; view = {level: 0, sido: null, sg: null}; applyView(); }
+function goSido(code2) { pickedSg = null; pinned = null; view = {level: 1, sido: code2, sg: null}; applyView(); }
 function goSg(f, pin) {
-  pinned = null;
+  pickedSg = null; pinned = null;
   view = {level: 2, sido: f.code2, sg: f};
   applyView(pin);
 }
+function pickSg(f) { pinned = null; view = {level: 1, sido: f.code2, sg: null}; pickedSg = f; applyView(); }
 function goUp() {
   if (view.level === 2) goSido(view.sido);
   else if (view.level === 1) goTop();
@@ -389,6 +392,7 @@ function applyView(pinName) {
     let op = 1, cls = 'r can';
     if (view.level === 1 && f.code2 !== view.sido) { op = .1; cls = 'r off'; }
     if (view.level === 2) { op = 0; cls = 'r off'; }
+    if (view.level === 1 && f === pickedSg) { cls = 'r can pick'; regionsG.appendChild(f.el); }
     f.el.setAttribute('class', cls);
     f.el.style.opacity = op;
   });
@@ -445,7 +449,7 @@ function legend(br, hi, scope, lo0 = 1) {
 function bars(el, rows, selFn) {
   const max = Math.max(1, ...rows.map(r => r.v));
   el.innerHTML = rows.map((r, i) =>
-    `<div class="bar${selFn && selFn(r) ? ' sel' : ''}" data-i="${i}"><span class="l">${r.label}${r.sub ? ` <small style="color:var(--muted)">${r.sub}</small>` : ''}</span><span>${r.v > 0 ? `<div class="t" style="width:${r.v / max * 100}%"></div>` : ''}</span><span class="n">${fv(r.v)}</span></div>`).join('');
+    `<div class="bar${selFn && selFn(r) ? ' sel' : ''}" data-i="${i}"${r.f ? ` data-fid="${r.f.id}"` : ''}><span class="l">${r.label}${r.sub ? ` <small style="color:var(--muted)">${r.sub}</small>` : ''}</span><span>${r.v > 0 ? `<div class="t" style="width:${r.v / max * 100}%"></div>` : ''}</span><span class="n">${fv(r.v)}</span></div>`).join('');
   el.querySelectorAll('.bar').forEach(b => {
     const r = rows[+b.dataset.i];
     if (r.click) b.addEventListener('click', r.click);
@@ -561,6 +565,7 @@ function showContext() {
       ${ksizeTable('00')}
       <div class="meta" style="margin-top:8px">시도를 누르면 그 시도의 규모별 농가가 보입니다</div>`);
   } else if (view.level === 1) {
+    if (pickedSg) { showDetail(sigunguDetail(pickedSg)); return; }
     const list = feats.filter(f => f.code2 === view.sido);
     showDetail(`<h2>${sidoName[view.sido]}</h2>
       <div class="big">${fv(aggFeats(list))}<span style="font-size:1rem;font-weight:500;color:var(--ink)"> ${UNIT()}</span></div>
@@ -585,9 +590,10 @@ function showContext() {
   }
 }
 function markSel() {
-  if (typeof syncPicker === 'function' && $('selEmd').options.length > 1) $('selEmd').value = pinned ? String(emdList.indexOf(pinned)) : '';
+  $('selEmd').value = pinned ? pinned.name : '';
   emdList.forEach(e => e.el.classList.toggle('sel', e === pinned));
   document.querySelectorAll('#p1 .bar,#p2 .bar').forEach(b => b.classList.remove('sel'));
+  if (view.level === 1 && pickedSg) { const el = document.querySelector(`#p1 .bar[data-fid="${pickedSg.id}"]`); if (el) el.classList.add('sel'); }
   if (view.level === 2 && pinned) {
     const i = [...emdList].sort((a, b) => b.v - a.v).indexOf(pinned);
     const el = document.querySelector(`#p1 .bar[data-i="${i}"]`);
@@ -622,20 +628,22 @@ const optHtml = (all, rows) => `<option value="">${all}</option>` + rows.map(([v
 const sidoCodes = [...new Set(feats.map(f => f.code2))];
 $('selSido').innerHTML = optHtml('전국', sidoCodes.map(c => [c, sidoName[c]]));
 function syncPicker() {
-  const sg = $('selSg'), em = $('selEmd');
+  const sg = $('selSg'), em = $('selEmd'), cur = view.level === 2 ? view.sg : pickedSg;     // 지금 고른 시군구
   $('selSido').value = view.sido || '';
   sg.disabled = view.level < 1;
   sg.innerHTML = view.level < 1 ? optHtml('시도를 먼저', []) : optHtml('전체', feats.filter(f => f.code2 === view.sido).map(f => [f.id, f.name]).sort((a, b) => a[1].localeCompare(b[1], 'ko')));
-  sg.value = view.level === 2 ? view.sg.id : '';
-  em.disabled = view.level < 2;
-  em.innerHTML = view.level < 2 ? optHtml('시군구를 먼저', []) : optHtml('전체', emdList.map((e, i) => [i, e.name]));
-  em.value = pinned ? String(emdList.indexOf(pinned)) : '';
+  sg.value = cur ? cur.id : '';
+  em.disabled = !cur;
+  em.innerHTML = !cur ? optHtml('시군구를 먼저', []) : optHtml('전체', (DATA.emds[cur.id] || []).map(r => [r[0], r[0]]));
+  em.value = pinned ? pinned.name : '';
 }
 $('selSido').addEventListener('change', e => { if (e.target.value) goSido(e.target.value); else goTop(); });
-$('selSg').addEventListener('change', e => { if (e.target.value) goSg(byId[e.target.value]); else goSido(view.sido); });
+// 시군구를 고르면 시도 화면에 머물며 그 시군구를 강조한다(지표 5개 모두 사용). 읍면동 화면은 읍면동 상자나 지도 클릭으로
+$('selSg').addEventListener('change', e => { if (e.target.value) pickSg(byId[e.target.value]); else goSido(view.sido); });
 $('selEmd').addEventListener('change', e => {
-  pinned = e.target.value === '' ? null : emdList[+e.target.value];
-  markSel(); showContext();
+  const v = e.target.value;
+  if (view.level === 2) { pinned = v === '' ? null : (emdList.find(x => x.name === v) || null); markSel(); showContext(); }
+  else if (v && pickedSg) goSg(pickedSg, v);
 });
 
 /* ---------- 전체 그리기 ---------- */
@@ -699,7 +707,7 @@ function render() {
   } else if (view.level === 1) {
     $('t1').textContent = `${sidoName[view.sido]} 시군구별`; $('t2').textContent = `${sidoName[view.sido]} 읍면동 상위 15`;
     const list = feats.filter(f => f.code2 === view.sido).sort((a, b) => val(b) - val(a));
-    bars($('p1'), rankList(list).map(f => ({label: rankName(f), v: val(f), click: () => goSg(f), enter: () => showDetail(sigunguDetail(f))})));
+    bars($('p1'), rankList(list).map(f => ({f, label: rankName(f), v: val(f), click: () => goSg(f), enter: () => showDetail(sigunguDetail(f))})));
     $('t2').textContent = `${sidoName[view.sido]} 한우 농가당 두수`;
     const avgL = rankList(feats.filter(f => f.code2 === view.sido && f.hwf > 0)).map(f => ({f, v: f.hw / f.hwf})).sort((a, b) => b.v - a.v);
     const m0 = metric; metric = 'hwavg';
