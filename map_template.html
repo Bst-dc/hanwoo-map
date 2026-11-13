@@ -170,7 +170,7 @@ h3,h2.lh{margin:0 0 8px;font-size:.95rem}
 .rl .l small{color:#33422f}
 .alert .src{font-size:.8rem;line-height:1.5;color:#33422f;margin-top:8px}
 .alert .src a{color:#1b5e2a;font-weight:700}
-.note{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px;font-size:.8rem;line-height:1.55;color:var(--ink)}
+.note{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:18px;font-size:.8rem;line-height:1.55;color:var(--ink)}
 @media (max-width:820px){.note{grid-template-columns:1fr}}
 .note .nt{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px 16px;box-shadow:var(--shadow)}
 .note h2{margin:0 0 6px;font-size:.84rem;font-weight:700;color:var(--ink)}
@@ -945,11 +945,6 @@ function render() {
       <li>읍면동 두수: <b>국립환경과학원</b> ${DATA.emdHwYear}년 <span class="dim">(신고 기준)</span></li>
       <li>시군구 규모별·100두+ 비중: <b>공공데이터포털 15147310</b> <span class="dim">(${DATA.hwYear}.1.1 기준)</span></li>
       <li>경계: 통계청 2018년 <span class="dim">(이후 개편 지역은 실제와 다를 수 있음)</span></li>
-    </ul></section>
-    <section class="nt"><h2>읽는 법</h2><ul>
-      <li>구 없이 집계된 시·광역시는 각 구에 <b>같은 값</b>으로 표시하고, 합계에는 한 번만 넣습니다.</li>
-      <li>송아지 비중 = 한육우 중 <b>1세 미만</b>의 비율입니다.</li>
-      <li>비율·평균 지표의 순위와 색 구간에서는 <b>한우 1,000두 미만</b> 지역을 뺍니다.</li>
     </ul></section>
     <section class="nt warnbox"><h2>주의</h2><ul>
       <li><b>⚠ 표시 지역</b>(강원 등): 규모별 자료가 KOSIS와 20% 넘게 달라 경고와 함께 보이며, 전국·시도 합계에서는 뺍니다.</li>
