@@ -126,6 +126,7 @@ h3,h2.lh{margin:0 0 8px;font-size:.95rem}
 .sz .b i{display:block;height:7px;border-radius:2px;min-width:2px}
 .sz .n{text-align:right;font-variant-numeric:tabular-nums;line-height:1.35;white-space:nowrap}
 .sz .n small{color:var(--muted)}
+.warn{font-size:.78rem;line-height:1.45;color:#7a4b00;background:#fff3d6;border:1px solid #ecd49a;border-radius:8px;padding:7px 10px;margin-top:12px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -189,7 +190,7 @@ let wantMetric = metric;    // 사용자가 마지막으로 고른 지표 (읍�
 const lastV = a => (a && a.length ? a[a.length - 1] : 0) || 0;
 const calfOf = f => lastV(f.kt) > 0 ? lastV(f.ky) / lastV(f.kt) * 100 : 0;
 const binSum = b => b.reduce((a, x) => a + x[2], 0);
-const bigOf = f => { if (f.obOk === false) return 0; const b = f.hb || [], t = binSum(b); return t > 0 ? b[0][2] / t * 100 : 0; };
+const bigOf = f => { const b = f.hb || [], t = binSum(b); return t > 0 ? b[0][2] / t * 100 : 0; };
 const val = f => metric === 'hw' ? (f.hw || 0) : metric === 'hwfarm' ? (f.hwf || 0) : metric === 'hwavg' ? (f.hwf > 0 ? f.hw / f.hwf : 0)
   : metric === 'calf' ? calfOf(f) : bigOf(f);
 const ONE = () => ['hwavg', 'calf', 'big'].includes(metric);       // 소수 한 자리로 보이는 지표
@@ -206,13 +207,23 @@ const repOf = f => !grpOf(f) || (metric === 'big' ? f.ohs > 0 : f.kr === 1);
 // 비율·평균 지표는 한우가 1,000두 미만인 지역(과천시 4두 등)이 1위를 차지하지 않도록 순위·색 구간에서 뺀다
 const thin = f => ['hwavg', 'calf', 'big'].includes(metric) && (f.hw || 0) < 1000;
 const rankList = list => list.filter(f => repOf(f) && !thin(f));
-const rankName = f => grpOf(f) || f.name;
+const rankName = f => (grpOf(f) || f.name) + (metric === 'big' && f.obOk === false ? ' ⚠' : '');
 const aggFeats = list => {
-  const rep = list.filter(repOf).filter(f => metric !== 'big' || f.obOk !== false), sum = fn => rep.reduce((a, f) => a + fn(f), 0);
+  // 100두+ 비중: 경고 지역은 합계에서 빼되, 한우의 절반 넘게 경고 지역이면(강원 시도) 전체로 계산하고 '참고용'으로 표시한다
+  const all = list.filter(repOf), okL = all.filter(f => metric !== 'big' || f.obOk !== false);
+  const rep = metric === 'big' && okL.reduce((a, f) => a + (f.hw || 0), 0) < all.reduce((a, f) => a + (f.hw || 0), 0) * 0.5 ? all : okL;
+  const sum = fn => rep.reduce((a, f) => a + fn(f), 0);
   if (metric === 'big') { const t = sum(f => binSum(f.hb || [])); return t > 0 ? sum(f => ((f.hb || [])[0] || [0, 0, 0])[2]) / t * 100 : 0; }
   if (metric === 'calf') { const t = sum(f => lastV(f.kt)); return t > 0 ? sum(f => lastV(f.ky)) / t * 100 : 0; }
   const d = list.reduce((a, f) => a + (f.hs || 0), 0), h = list.reduce((a, f) => a + (f.hfs || 0), 0);
   return metric === 'hw' ? d : metric === 'hwfarm' ? h : (h > 0 ? d / h : 0);
+};
+const bigNote = list => {
+  if (metric !== 'big') return '';
+  const all = list.filter(repOf), bad = all.filter(f => f.obOk === false);
+  if (!bad.length) return '';
+  const w = all.reduce((a, f) => a + (f.hw || 0), 0), ok = all.filter(f => f.obOk !== false).reduce((a, f) => a + (f.hw || 0), 0);
+  return ok < w * 0.5 ? ' ⚠ 참고용' : ' (⚠ 지역 제외)';
 };
 /* KOSIS 분기 표시 도우미 */
 const LASTQ = DATA.kq ? DATA.kq[DATA.kq.length - 1] : null;
@@ -514,14 +525,14 @@ function hwDetail(f) {
   const share = ONE() ? `${where} 평균 ${agg.toFixed(1)}${UNIT()}` : `${where} 대비 ${(v / agg * 100).toFixed(1)}%`;
   const chg = [['직전 분기', f.hwq], ['전년 동기', f.hwp]].map(([l, b]) => pctTxt(f.hw, b) && `${l} 대비 ${pctTxt(f.hw, b)}`).filter(Boolean).join(' · ');
   const calfTxt = lastV(f.kt) > 0 ? `<div class="meta">한육우 ${fmt(lastV(f.kt))}두 중 1세 미만 ${fmt(lastV(f.ky))}두 (${calfOf(f).toFixed(1)}%)</div>` : '';
-  const hasB = f.obOk !== false && (f.hb || []).some(b => b[1] > 0 || b[2] > 0);
-  const hideB = f.obOk === false ? `<div class="meta" style="margin-top:14px">사육 규모별 자료(공공데이터포털 15147310)는 이 지역에서 KOSIS 두수의 ${Math.round((f.obR || 0) * 100)}%로 크게 달라 표시하지 않습니다.</div>` : '';
+  const hasB = (f.hb || []).some(b => b[1] > 0 || b[2] > 0);
+  const warnB = f.obOk === false ? `<div class="warn">⚠ 이 지역의 규모별 자료(15147310)는 KOSIS 두수의 ${Math.round((f.obR || 0) * 100)}%로 크게 달라, 아래 농가·두수는 실제보다 크게 나올 수 있어 참고용입니다.</div>` : '';
   return `<h2>${f.sido} ${grpOf(f) || f.name}</h2>` + (v > 0 ?
     `<div class="big">${fv(v)}<span style="font-size:1rem;font-weight:500;color:var(--ink)"> ${UNIT()}</span></div>
      <div class="meta">한우 · ${where} ${fmt(has.length)}곳 중 ${rank}위 · ${share}</div>
      <div class="meta">${qLabel(LASTQ)} · 농가 ${fmt(f.hwf)}호 · 사육 ${fmt(f.hw)}두${f.hwf > 0 ? ` · 농가당 ${(f.hw / f.hwf).toFixed(1)}두` : ''}</div>
      ${chg ? `<div class="meta">${chg}</div>` : ''}${calfTxt}
-     ${hasB ? sizeTable([f]) : hideB}
+     ${hasB ? warnB + sizeTable([f]) : ''}
      ${grpOf(f) ? `<div class="meta" style="margin-top:8px">※ 이 자료는 ${grpOf(f)} 전체를 한 덩어리로 집계해서, 소속 구가 모두 같은 값으로 표시됩니다.</div>` : ''}
      <div class="meta" style="margin-top:8px">${view.level === 0 ? '눌러서 해당 시도로 확대' : '눌러서 읍면동 한우 두수 보기(환경조사 ' + DATA.emdHwYear + ')'}</div>`
     : `<div class="meta" style="margin-top:6px">한우 자료가 없습니다.${f.name === '군위군' ? ' 군위군은 2023년 대구 편입 이후 KOSIS가 대구광역시에 합쳐서 집계합니다.' : ''}</div>`);
@@ -550,7 +561,7 @@ function showContext() {
     const list = feats.filter(f => f.code2 === view.sido);
     showDetail(`<h2>${sidoName[view.sido]}</h2>
       <div class="big">${fv(aggFeats(list))}<span style="font-size:1rem;font-weight:500;color:var(--ink)"> ${UNIT()}</span></div>
-      <div class="meta">한우 · 시군구 ${list.length}곳</div>
+      <div class="meta">한우 · 시군구 ${list.length}곳${bigNote(list)}</div>
       ${trendBlock(sumSeries(list), ['22', '37'].includes(view.sido) ? '※ 군위군이 2023년 7월 경북에서 대구로 편입되어, 그 전후 분기는 직접 비교할 수 없습니다.' : '') + ksizeTable(view.sido)}
       <div class="meta" style="margin-top:8px">시군구를 누르면 읍면동이 보입니다</div>`);
   } else if (pinned) {
@@ -645,19 +656,19 @@ function render() {
   }
 
   // 요약 지표
-  let kScope, kTotal, kCount, kUnit, kTop;
+  let kScope, kTotal, kCount, kUnit, kTop, kNote = '';
   if (view.level === 0) {
     const arr = rankList(feats).filter(f => val(f) > 0).sort((a, b) => val(b) - val(a));
-    kScope = '전국'; kTotal = aggFeats(feats); kCount = arr.length; kUnit = '시군구'; kTop = arr[0] ? [rankName(arr[0]), val(arr[0])] : ['-', 0];
+    kScope = '전국'; kNote = bigNote(feats); kTotal = aggFeats(feats); kCount = arr.length; kUnit = '시군구'; kTop = arr[0] ? [rankName(arr[0]), val(arr[0])] : ['-', 0];
   } else if (view.level === 1) {
     const arr = rankList(feats.filter(f => f.code2 === view.sido && val(f) > 0)).sort((a, b) => val(b) - val(a));
-    kScope = sidoName[view.sido]; kTotal = aggFeats(feats.filter(f => f.code2 === view.sido)); kCount = arr.length; kUnit = '시군구'; kTop = arr[0] ? [rankName(arr[0]), val(arr[0])] : ['-', 0];
+    kScope = sidoName[view.sido]; kNote = bigNote(feats.filter(f => f.code2 === view.sido)); kTotal = aggFeats(feats.filter(f => f.code2 === view.sido)); kCount = arr.length; kUnit = '시군구'; kTop = arr[0] ? [rankName(arr[0]), val(arr[0])] : ['-', 0];
   } else {
     const arr = [...emdList].filter(e => e.v > 0).sort((a, b) => b.v - a.v);
     kScope = view.sg.name + ' 읍면동 합계'; kTotal = emdList.reduce((a, e) => a + e.v, 0); kCount = arr.length; kUnit = '읍면동'; kTop = arr[0] ? [arr[0].name, arr[0].v] : ['-', 0];
   }
   $('kpis').innerHTML =
-    `<div class="kpi"><span>${kScope} ${KLAB[metric]}</span><b>${fv(kTotal)}${KU()}</b></div>` +
+    `<div class="kpi"><span>${kScope} ${KLAB[metric]}${kNote}</span><b>${fv(kTotal)}${KU()}</b></div>` +
     `<div class="kpi"><span>자료가 있는 ${kUnit}</span><b>${fmt(kCount)}곳</b></div>` +
     `<div class="kpi"><span>${ONE() ? '가장 높은' : '가장 많은'} ${kUnit}</span><b>${kTop[0]} ${fv(kTop[1])}${ONE() ? KU() : ''}</b></div>`;
 
@@ -703,7 +714,7 @@ function render() {
 
   $('note').innerHTML = [
     `· 한우 두수·농가: KOSIS 가축동향조사 ${qLabel(LASTQ)}(${qDate(LASTQ)} 기준). 구 없이 집계된 시는 각 구에 같은 값, 합계엔 한 번만.`,
-    `· 송아지 비중은 한육우 중 1세 미만. 비율 지표 순위는 한우 1,000두 미만 지역 제외. 시군구 규모별·100두+ 비중은 15147310(${DATA.hwYear}.1.1)이며 KOSIS와 20% 넘게 다른 지역(강원 등)은 숨김.`,
+    `· 송아지 비중은 한육우 중 1세 미만. 비율 지표 순위는 한우 1,000두 미만 지역 제외. 시군구 규모별·100두+ 비중은 15147310(${DATA.hwYear}.1.1)이며 KOSIS와 20% 넘게 다른 지역(강원 등)은 ⚠ 경고와 함께 보이고 전국·시도 합계에서는 뺍니다.`,
     `· 읍면동 두수: 환경과학원 ${DATA.emdHwYear}(신고 기준, 법정동 약 5%는 시군구에만). 군위군은 KOSIS가 대구에 포함. 경계는 통계청 2018년.`
   ].join('<br>');
 }

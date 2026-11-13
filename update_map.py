@@ -266,7 +266,7 @@ def build_data(geo, fetched, hw_rows, kosis, nier=None):
         old = hw_map.get(ft["id"], {})
         ft.update({"hb": old.get("hb", []), "ohw": old.get("hw", 0), "ohs": old.get("hs", 0), "ohg": old.get("hg")})
         ft.update(k_units.get(ft["id"], empty))
-        # 15147310(규모 구간)이 KOSIS 와 크게 어긋나는 지역은 규모별 값을 숨긴다 (강원 등). 한우 1,000두 미만이거나
+        # 15147310(규모 구간)이 KOSIS 와 크게 어긋나는 지역은 경고를 붙이고 합계에서 뺀다 (강원 등). 한우 1,000두 미만이거나
         # 두 자료의 묶음 단위가 다른 곳은 비교가 무의미해 그대로 둔다
         ratio = ft["ohw"] / ft["hw"] if ft["ohw"] > 0 and ft["hw"] > 0 else None
         checkable = ratio is not None and ft["hw"] >= OB_MIN_HEADS and ft.get("ohg") == ft.get("hg")
@@ -359,7 +359,7 @@ def main():
         by = defaultdict(int)
         for f in hidden:
             by[f["sido"]] += 1
-        print(f"[알림] 규모별 자료(15147310)가 KOSIS와 크게 달라 숨긴 지역 {len(hidden)}곳: {dict(by)}")
+        print(f"[알림] 규모별 자료(15147310)가 KOSIS와 크게 달라 ⚠ 경고를 붙인 지역 {len(hidden)}곳: {dict(by)}")
     er = data["emdHwReport"]
     if data["hasEmdHw"] and er["total"]:
         print(f"읍면동 한우({data['emdHwYear']}년, 환경과학원): 합계 {er['total']:,}두 중 읍면동에 연결 {er['matched'] / er['total']:.1%} "
