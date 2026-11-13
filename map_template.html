@@ -11,7 +11,7 @@
 /* 초지: 밝은 초록 (낮에 보기 편한 화면). 자료 없음은 베이지, 가장 낮은 구간은 연두 */
 :root{
   --fh:var(--fb);
-  --bg:#eef3ea; --panel:#fbfdf8; --ink:#1f2a1c; --muted:#5a6954; --line:#d9e3d2;
+  --bg:#eef3ea; --panel:#fbfdf8; --ink:#1f2a1c; --muted:#40503b; --line:#d9e3d2;
   --sea:#e3edf0; --nodata:#d8d1bf; --stroke:#fbfdf8; --prov:#7f9276; --sido:#ffffff; --accent:#2f7d3a;
   --r0:#e4f2cf; --r1:#c6e3a0; --r2:#9fd07f; --r3:#72b45e; --r4:#489648; --r5:#2a7640; --r6:#145028;
   --radius:12px; --shadow:0 1px 2px rgba(30,60,30,.08); --maplift:inset 0 0 0 1px #d9e3d2;
@@ -114,30 +114,32 @@ h3,h2.lh{margin:0 0 8px;font-size:.95rem}
 @media (max-width:820px){.alert{grid-template-columns:1fr}}
 .alert h2{margin:0;font-size:.95rem}
 .alert .ah{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-bottom:8px}
-.alert .ah small{color:var(--muted);font-size:.74rem}
+.alert .ah small{color:#33422f;font-size:.82rem}
 .alert .stale{color:#7a4b00;background:#fff3d6;border:1px solid #ecd49a;border-radius:6px;padding:0 6px}
 .gs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-@media (max-width:520px){.gs{gap:6px}.g1{padding:6px 4px 8px}.g1 b{font-size:.84rem}.g1 .dt{font-size:.68rem}.g1 .st{display:none}.g1 .bs{font-size:.6rem;padding:0 5px}.g1 .lv{font-size:.7rem}}
-.g1{background:var(--bg);border-radius:10px;padding:6px 8px 8px;text-align:center}
-.g1 b{display:block;font-size:.92rem}
-.g1 svg{display:block;width:100%;max-width:116px;margin:0 auto}
-.g1 .lv{font-size:.78rem;color:var(--muted)}
-.g1 .lv i{font-style:normal;margin:0 3px}
-.g1 .lv i.on{font-weight:800}
-.g1 .dt{font-size:.78rem;line-height:1.4;margin-top:4px}
-.g1 .st{font-size:.74rem;line-height:1.4;color:var(--muted);margin-top:2px}
-.g1 .bs{display:inline-block;font-size:.68rem;border-radius:999px;padding:0 7px;margin-top:3px;background:#dcefe0;color:#1f4d33}
-.g1 .bs.screen{background:#ece9e0;color:#5a5648}
-.rl{list-style:none;margin:0;padding:0;font-size:.8rem}
+@media (max-width:520px){.gs{gap:6px}.g1{padding:8px 4px 8px}.g1 .gh{flex-direction:column;gap:3px}.g1 .gh b{font-size:.84rem}.g1 .pill{font-size:.7rem;padding:0 8px}.g1 .dt{font-size:.68rem}.g1 .st{display:none}.g1 .bs{font-size:.6rem;padding:0 5px}}
+.g1{background:var(--bg);border-radius:12px;padding:10px 12px 12px;display:grid;gap:2px;justify-items:center;text-align:center}
+.g1 .gh{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.g1 .gh b{font-size:.95rem}
+.g1 .pill{font-size:.84rem;font-weight:800;border-radius:999px;padding:1px 10px;white-space:nowrap}
+.g1 .pill.l1{background:#dff1fb;color:#0a6aa1}
+.g1 .pill.l2{background:#fff0c2;color:#7a5a00}
+.g1 .pill.l3{background:#fbdcd9;color:#a3201a}
+.g1 svg{display:block;width:100%;max-width:150px;margin:2px auto 0}
+.g1 .dt{font-size:.86rem;line-height:1.4;font-weight:700;margin-top:2px;color:var(--ink)}
+.g1 .st{font-size:.8rem;line-height:1.4;color:#33422f}
+.g1 .bs{display:inline-block;font-size:.76rem;font-weight:700;border-radius:999px;padding:1px 9px;margin-top:4px;background:#cfe9d6;color:#123d26}
+.g1 .bs.screen{background:#e6e1d2;color:#3f3a2a}
+.rl{list-style:none;margin:0;padding:0;font-size:.86rem}
 .rl li{display:grid;grid-template-columns:3.2em auto minmax(0,1fr);gap:6px;align-items:baseline;padding:4px 0;border-top:1px solid var(--line)}
 .rl li:first-child{border-top:0}
-.rl .d{color:var(--muted);font-variant-numeric:tabular-nums}
+.rl .d{color:#33422f;font-weight:600;font-variant-numeric:tabular-nums}
 .rl .k{font-weight:700;white-space:nowrap}
 .rl .k.fmd,.rl .k.lsd,.rl .k.tb{color:#a02d1f}
 .rl .l{min-width:0}
-.rl .l small{color:var(--muted)}
-.alert .src{font-size:.72rem;color:var(--muted);margin-top:6px}
-.alert .src a{color:var(--accent)}
+.rl .l small{color:#33422f}
+.alert .src{font-size:.8rem;line-height:1.5;color:#33422f;margin-top:8px}
+.alert .src a{color:#1b5e2a;font-weight:700}
 .note{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px;font-size:.8rem;line-height:1.55;color:var(--ink)}
 @media (max-width:820px){.note{grid-template-columns:1fr}}
 .note .nt{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px 16px;box-shadow:var(--shadow)}
@@ -711,13 +713,15 @@ $('selEmd').addEventListener('change', e => {
 /* ---------- 가축질병 위기경보 게이지 + 최근 발생 지역 (disease_status.json, 수동 갱신) ---------- */
 const LVNAME = ['', '관심', '주의', '심각'];
 function gaugeSvg(level, name) {
-  const cx = 60, cy = 58, r = 46, rin = 30, pt = (deg, rad) => [cx + rad * Math.sin(deg * Math.PI / 180), cy - rad * Math.cos(deg * Math.PI / 180)];
-  const arc = (a0, a1, col) => {
+  const cx = 60, cy = 60, r = 44, rin = 29, pt = (deg, rad) => [cx + rad * Math.sin(deg * Math.PI / 180), cy - rad * Math.cos(deg * Math.PI / 180)];
+  const f1 = n => n.toFixed(1);
+  const arc = (a0, a1, col, on) => {                 // 현재 단계만 진하게, 나머지는 옅게 (구간 사이에 작은 틈)
     const [x0, y0] = pt(a0, r), [x1, y1] = pt(a1, r), [x2, y2] = pt(a1, rin), [x3, y3] = pt(a0, rin);
-    return `<path d="M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)} L${x2.toFixed(1)} ${y2.toFixed(1)} A${rin} ${rin} 0 0 0 ${x3.toFixed(1)} ${y3.toFixed(1)}Z" fill="${col}"/>`;
+    return `<path d="M${f1(x0)} ${f1(y0)} A${r} ${r} 0 0 1 ${f1(x1)} ${f1(y1)} L${f1(x2)} ${f1(y2)} A${rin} ${rin} 0 0 0 ${f1(x3)} ${f1(y3)}Z" fill="${col}" opacity="${on ? 1 : .38}"/>`;
   };
-  const [nx, ny] = pt([-60, 0, 60][level - 1], 40);
-  return `<svg viewBox="0 0 120 66" role="img" aria-label="${name} 위기경보 ${LVNAME[level]}">${arc(-90, -30, '#34b6f0')}${arc(-30, 30, '#f6c026')}${arc(30, 90, '#e03a35')}<line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="#37474f" stroke-width="3.2" stroke-linecap="round"/><circle cx="${cx}" cy="${cy}" r="5.5" fill="#90a4ae"/></svg>`;
+  const lbl = (deg, txt, col, on) => { const [x, y] = pt(deg, r + 8); return `<text x="${f1(x)}" y="${f1(y)}" transform="rotate(${deg} ${f1(x)} ${f1(y)})" text-anchor="middle" dominant-baseline="central" font-size="9" font-weight="${on ? 800 : 700}" fill="${col}">${txt}</text>`; };
+  const [nx, ny] = pt([-60, 0, 60][level - 1], 36);
+  return `<svg viewBox="0 -2 120 68" role="img" aria-label="${name} 위기경보 ${LVNAME[level]}">${arc(-88, -31, '#2fb0ee', level === 1)}${arc(-29, 29, '#f2b807', level === 2)}${arc(31, 88, '#dc3a33', level === 3)}${lbl(-60, '관심', '#0a6aa1', level === 1)}${lbl(0, '주의', '#7a5a00', level === 2)}${lbl(60, '심각', '#a3201a', level === 3)}<line x1="${cx}" y1="${cy}" x2="${f1(nx)}" y2="${f1(ny)}" stroke="#2b3a42" stroke-width="3.4" stroke-linecap="round"/><circle cx="${cx}" cy="${cy}" r="6" fill="#fff" stroke="#2b3a42" stroke-width="2.4"/></svg>`;
 }
 function renderAlert() {
   const D = DATA.disease, el = $('alert');
@@ -727,8 +731,7 @@ function renderAlert() {
   const cls = {'구제역': 'fmd', '럼피스킨': 'lsd', '결핵병': 'tb'};
   el.innerHTML = `<div>
       <div class="ah"><h2>가축질병 위기경보 단계</h2><small>기준 ${D.asof.replace(/-/g, '.')}</small>${age >= 3 ? `<small class="stale">⚠ ${age}일 전 자료</small>` : ''}</div>
-      <div class="gs">${D.gauges.map(g => `<div class="g1"><b>${g.name}</b>${gaugeSvg(g.level, g.name)}
-        <div class="lv">${[1, 2, 3].map(n => `<i class="${n === g.level ? 'on' : ''}" style="${n === g.level ? 'color:' + ['', '#0b7bb8', '#8a6500', '#b3261e'][n] : ''}">${LVNAME[n]}</i>`).join('')}</div>
+      <div class="gs">${D.gauges.map(g => `<div class="g1"><div class="gh"><b>${g.name}</b><span class="pill l${g.level}">${LVNAME[g.level]}</span></div>${gaugeSvg(g.level, g.name)}
         <div class="dt">${g.detail}</div><div class="st">${g.stat}</div><span class="bs ${g.basis}">${g.basisText}</span></div>`).join('')}</div>
       <div class="src">${D.lumpy} · 출처: ${D.sources.map(s => `<a href="${s.url}" target="_blank" rel="noopener noreferrer">${s.name}</a>`).join(' · ')}</div>
     </div>
