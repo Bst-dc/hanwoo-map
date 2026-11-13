@@ -168,6 +168,7 @@ def hanwoo_units(hw_rows, geo):
 
 
 KOSIS_SIDO_GROUP = {"21", "22", "23", "24", "25", "26", "29"}   # 구 없이 시도 하나로 집계되는 광역시·세종
+OB_RATIO, OB_MIN_HEADS = (0.8, 1.25), 1000      # 15147310 / KOSIS 두수 비가 이 범위를 벗어나면 규모별 값을 숨김
 KOSIS_BINS = ["20 미만", "20~50 미만", "50~100 미만", "100 이상"]
 
 
@@ -387,6 +388,12 @@ def build_data(rows, head_rows, geo, fetched, hw_rows=None, kosis=None, nier=Non
             ft.update({"ohw": old.get("hw", 0), "ohwf": old.get("hwf", 0), "ohs": old.get("hs", 0),
                        "ohfs": old.get("hfs", 0), "ohg": old.get("hg")})
             ft.update(k_units.get(ft["id"], empty))
+            # 15147310(규모 구간)이 KOSIS 와 크게 어긋나는 지역은 규모별 값을 숨긴다 (강원 등). 한우 1,000두 미만이거나
+            # 두 자료의 묶음 단위가 다른 곳은 비교가 무의미해 그대로 둔다
+            ratio = ft["ohw"] / ft["hw"] if ft["ohw"] > 0 and ft["hw"] > 0 else None
+            checkable = ratio is not None and ft["hw"] >= OB_MIN_HEADS and ft.get("ohg") == ft.get("hg")
+            ft["obOk"] = not (checkable and not OB_RATIO[0] <= ratio <= OB_RATIO[1])
+            ft["obR"] = round(ratio, 2) if ratio is not None else None
 
     n_year, n_heads, n_lost = nier if nier else (None, {}, 0)
     emds, used, used_h, used_n = {}, set(), set(), set()
@@ -538,6 +545,12 @@ def main():
               f"(차이 {kr['national'] - sg:+,}두, {abs(kr['national'] - sg) / kr['national']:.1%}) · 연결 {kr['linked']}조각")
         for c, n, v in kr["unlinked"]:
             print(f"[알림] 지도와 연결하지 못한 KOSIS 지역: {n}({c}) {v or 0:,}두")
+    hidden = [f for f in data["feats"] if f.get("obOk") is False]
+    if hidden:
+        by = defaultdict(int)
+        for f in hidden:
+            by[f["sido"]] += 1
+        print(f"[알림] 규모별 자료(15147310)가 KOSIS와 크게 달라 숨긴 지역 {len(hidden)}곳: {dict(by)}")
     er = data.get("emdHwReport")
     if data["hasEmdHw"] and er["total"]:
         print(f"읍면동 한우({data['emdHwYear']}년, 환경과학원): 합계 {er['total']:,}두 중 읍면동에 연결 {er['matched'] / er['total']:.1%} "

@@ -187,7 +187,7 @@ const isHW = () => HWM.includes(metric);
 const lastV = a => (a && a.length ? a[a.length - 1] : 0) || 0;
 const calfOf = f => lastV(f.kt) > 0 ? lastV(f.ky) / lastV(f.kt) * 100 : 0;
 const binSum = b => b.reduce((a, x) => a + x[2], 0);
-const bigOf = f => { const b = f.hb || [], t = binSum(b); return t > 0 ? b[0][2] / t * 100 : 0; };
+const bigOf = f => { if (f.obOk === false) return 0; const b = f.hb || [], t = binSum(b); return t > 0 ? b[0][2] / t * 100 : 0; };
 const val = f => metric === 'farm' ? farmsOf(f) : metric === 'head' ? headOf(f)
   : metric === 'hw' ? (f.hw || 0) : metric === 'hwfarm' ? (f.hwf || 0) : metric === 'hwavg' ? (f.hwf > 0 ? f.hw / f.hwf : 0)
   : metric === 'calf' ? calfOf(f) : metric === 'big' ? bigOf(f)
@@ -211,7 +211,7 @@ const rankList = list => isHW() ? list.filter(f => repOf(f) && !thin(f)) : list;
 const rankName = f => isHW() && grpOf(f) ? grpOf(f) : f.name;
 const aggFeats = list => {
   if (isHW()) {
-    const rep = list.filter(repOf), sum = fn => rep.reduce((a, f) => a + fn(f), 0);
+    const rep = list.filter(repOf).filter(f => metric !== 'big' || f.obOk !== false), sum = fn => rep.reduce((a, f) => a + fn(f), 0);
     if (metric === 'big') { const t = sum(f => binSum(f.hb || [])); return t > 0 ? sum(f => (f.hb || [[0, 0, 0]])[0][2]) / t * 100 : 0; }
     if (metric === 'calf') { const t = sum(f => lastV(f.kt)); return t > 0 ? sum(f => lastV(f.ky)) / t * 100 : 0; }
     const d = list.reduce((a, f) => a + (f.hs || 0), 0), h = list.reduce((a, f) => a + (f.hfs || 0), 0);
@@ -526,13 +526,14 @@ function hwDetail(f) {
   const share = ONE() ? `${where} 평균 ${agg.toFixed(1)}${UNIT()}` : `${where} 대비 ${(v / agg * 100).toFixed(1)}%`;
   const chg = [['직전 분기', f.hwq], ['전년 동기', f.hwp]].map(([l, b]) => pctTxt(f.hw, b) && `${l} 대비 ${pctTxt(f.hw, b)}`).filter(Boolean).join(' · ');
   const calfTxt = lastV(f.kt) > 0 ? `<div class="meta">한육우 ${fmt(lastV(f.kt))}두 중 1세 미만 ${fmt(lastV(f.ky))}두 (${calfOf(f).toFixed(1)}%)</div>` : '';
-  const hasB = (f.hb || []).some(b => b[1] > 0 || b[2] > 0);
+  const hasB = f.obOk !== false && (f.hb || []).some(b => b[1] > 0 || b[2] > 0);
+  const hideB = f.obOk === false ? `<div class="meta" style="margin-top:14px">사육 규모별 자료(공공데이터포털 15147310)는 이 지역에서 KOSIS 두수의 ${Math.round((f.obR || 0) * 100)}%로 크게 달라 표시하지 않습니다.</div>` : '';
   return `<h2>${f.sido} ${grpOf(f) || f.name}</h2>` + (v > 0 ?
     `<div class="big">${fv(v)}<span style="font-size:1rem;font-weight:500;color:var(--ink)"> ${UNIT()}</span></div>
      <div class="meta">한우 · ${where} ${fmt(has.length)}곳 중 ${rank}위 · ${share}</div>
      <div class="meta">${qLabel(LASTQ)} · 농가 ${fmt(f.hwf)}호 · 사육 ${fmt(f.hw)}두${f.hwf > 0 ? ` · 농가당 ${(f.hw / f.hwf).toFixed(1)}두` : ''}</div>
      ${chg ? `<div class="meta">${chg}</div>` : ''}${calfTxt}
-     ${hasB ? sizeTable([f]) : ''}
+     ${hasB ? sizeTable([f]) : hideB}
      ${grpOf(f) ? `<div class="meta" style="margin-top:8px">※ 이 자료는 ${grpOf(f)} 전체를 한 덩어리로 집계해서, 소속 구가 모두 같은 값으로 표시됩니다.</div>` : ''}
      <div class="meta" style="margin-top:8px">${view.level === 0 ? '눌러서 해당 시도로 확대' : '눌러서 읍면동 한우 두수 보기(환경조사 ' + DATA.emdHwYear + ')'}</div>`
     : `<div class="meta" style="margin-top:6px">한우 자료가 없습니다.${f.name === '군위군' ? ' 군위군은 2023년 대구 편입 이후 KOSIS가 대구광역시에 합쳐서 집계합니다.' : ''}</div>`);
@@ -750,7 +751,7 @@ function render() {
   const unk = DATA.unknown[sp] || 0;
   $('note').innerHTML = (LASTQ && isHW() ? [
     `· 한우 두수·농가 수: KOSIS 가축동향조사 ${qLabel(LASTQ)}(${qDate(LASTQ)} 기준, 분기 자료). 구 없이 집계된 시·광역시는 각 구에 같은 값으로 표시하고 합계에는 한 번만 넣습니다.`,
-    `· 송아지 비중: 한육우(한우+육우) 중 1세 미만의 비율. 비율·평균 지표의 순위와 색 구간에서는 한우 1,000두 미만 지역을 뺍니다. 규모별 농가는 전국·시도가 KOSIS, 시군구와 "100두+ 비중"은 공공데이터포털 15147310(${DATA.hwYear}.1.1 기준, 연 1회)이라 시점과 합계가 서로 다릅니다.`,
+    `· 송아지 비중: 한육우(한우+육우) 중 1세 미만의 비율. 비율·평균 지표의 순위와 색 구간에서는 한우 1,000두 미만 지역을 뺍니다. 규모별 농가는 전국·시도가 KOSIS, 시군구와 "100두+ 비중"은 공공데이터포털 15147310(${DATA.hwYear}.1.1 기준, 연 1회)이라 시점과 합계가 서로 다르며, KOSIS 두수와 20% 넘게 어긋나는 지역(강원 등)은 표시하지 않습니다.`,
     `· 읍면동에서는 "한우 두수"만 국립환경과학원 ${DATA.emdHwYear}년 자료(가축분뇨 배출시설 신고 기반)로 보입니다. 신고 누락 등으로 시군구 합계(KOSIS)와 다를 수 있고(강원은 절반 수준), 이름이 경계와 맞지 않는 법정동(약 5%)은 시군구 합계에만 들어갑니다.`,
     `· 다른 한우 지표는 시군구까지입니다. 군위군은 대구 편입(2023) 이후 KOSIS가 대구에 합쳐서 집계합니다.`
   ] : [
