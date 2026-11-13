@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko" data-style="night">
+<html lang="ko">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,49 +8,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{--fb:"Noto Sans KR","Pretendard","Malgun Gothic",system-ui,sans-serif;--fh:"Noto Serif KR","Batang",serif}
-/* 야간: 회의실 화면 투사용 */
-:root[data-style="night"]{
+/* 초지: 밝은 초록 (낮에 보기 편한 화면). 자료 없음은 베이지, 가장 낮은 구간은 연두 */
+:root{
   --fh:var(--fb);
-  --bg:#0e1219; --panel:#161c27; --ink:#e9edf3; --muted:#8c97a9; --line:#242d3d;
-  --sea:#0b0f15; --nodata:#1a2230; --stroke:#0e1219; --prov:#5b6c88; --accent:#fbd24d;
-  --r0:#2e2358; --r1:#5a2b86; --r2:#8a2f8f; --r3:#c13b82; --r4:#e8575f; --r5:#f98d43; --r6:#fbd24d;
-  --radius:12px; --shadow:0 0 0 1px rgba(255,255,255,.02); --maplift:none;
-}
-/* 시안: ?style=paper | hanwoo | pasture | navy | viridis */
-:root[data-style="paper"]{
-  --fh:var(--fb);
-  --bg:#f4f1ea; --panel:#fffdf8; --ink:#25221d; --muted:#7a7468; --line:#e2dccf;
-  --sea:#e9eef0; --nodata:#ece7dc; --stroke:#fffdf8; --prov:#8a8576; --accent:#b4321f;
-  --r0:#f7e6d3; --r1:#f1c9a5; --r2:#e8a36f; --r3:#d9773f; --r4:#bb4f24; --r5:#8e3418; --r6:#5e2210;
-  --radius:12px; --shadow:0 1px 2px rgba(60,50,30,.08); --maplift:inset 0 0 0 1px #e2dccf;
-}
-:root[data-style="hanwoo"]{
-  --fh:var(--fb);
-  --bg:#17110d; --panel:#211812; --ink:#f3e9dc; --muted:#a99886; --line:#33261d;
-  --sea:#120d0a; --nodata:#2a1f17; --stroke:#17110d; --prov:#7b624d; --accent:#f0b25a;
-  --r0:#3b2417; --r1:#5e3519; --r2:#85481c; --r3:#aa5f22; --r4:#cf7d2d; --r5:#eaa24a; --r6:#f7cd7f;
-  --radius:12px; --shadow:0 0 0 1px rgba(255,255,255,.02); --maplift:none;
-}
-:root[data-style="pasture"]{
-  --fh:var(--fb);
-  --bg:#eef3ea; --panel:#fbfdf8; --ink:#1f2a1c; --muted:#6b7a64; --line:#d9e3d2;
-  --sea:#e3edf0; --nodata:#e6ebe0; --stroke:#fbfdf8; --prov:#7f9276; --accent:#2f7d3a;
-  --r0:#eef6e3; --r1:#d3e8b8; --r2:#a9d48b; --r3:#78b862; --r4:#4a9a4a; --r5:#2c7a3d; --r6:#155329;
+  --bg:#eef3ea; --panel:#fbfdf8; --ink:#1f2a1c; --muted:#5a6954; --line:#d9e3d2;
+  --sea:#e3edf0; --nodata:#d8d1bf; --stroke:#fbfdf8; --prov:#7f9276; --accent:#2f7d3a;
+  --r0:#e4f2cf; --r1:#c6e3a0; --r2:#9fd07f; --r3:#72b45e; --r4:#489648; --r5:#2a7640; --r6:#145028;
   --radius:12px; --shadow:0 1px 2px rgba(30,60,30,.08); --maplift:inset 0 0 0 1px #d9e3d2;
-}
-:root[data-style="navy"]{
-  --fh:var(--fb);
-  --bg:#0a1220; --panel:#101a2e; --ink:#e8eef9; --muted:#8393b0; --line:#1e2c47;
-  --sea:#070d18; --nodata:#16233a; --stroke:#0a1220; --prov:#4d6590; --accent:#6cc4ff;
-  --r0:#16305c; --r1:#1d4a85; --r2:#2a6bb0; --r3:#3f8fd0; --r4:#66b2e6; --r5:#9ed0f2; --r6:#d3ecfb;
-  --radius:12px; --shadow:0 0 0 1px rgba(255,255,255,.03); --maplift:none;
-}
-:root[data-style="viridis"]{
-  --fh:var(--fb);
-  --bg:#0e1219; --panel:#161c27; --ink:#e9edf3; --muted:#8c97a9; --line:#242d3d;
-  --sea:#0b0f15; --nodata:#1a2230; --stroke:#0e1219; --prov:#5b6c88; --accent:#fde725;
-  --r0:#440154; --r1:#443983; --r2:#31688e; --r3:#21918c; --r4:#35b779; --r5:#90d743; --r6:#fde725;
-  --radius:12px; --shadow:0 0 0 1px rgba(255,255,255,.02); --maplift:none;
 }
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -81,6 +45,7 @@ select,button.btn{font:inherit;color:var(--ink);background:var(--panel);border:1
 .hint{color:var(--muted);font-size:.8rem;margin-left:auto}
 svg#map{width:100%;height:auto;display:block;background:var(--sea);border-radius:max(2px,calc(var(--radius) - 4px));box-shadow:var(--maplift);transition:background .3s}
 svg#map path{vector-effect:non-scaling-stroke}
+svg#map path.r,svg#map path.e{fill:var(--nodata)}      /* 색이 입혀지기 전 시작색 (기본 검정이 밝은 화면에서 번쩍이지 않게) */
 svg#map path.r{stroke:var(--stroke);stroke-width:.7px;cursor:pointer;transition:opacity .3s,fill .3s}
 svg#map path.r.can:hover{stroke:var(--accent);stroke-width:2px}
 svg#map path.r.off{pointer-events:none;cursor:default}
@@ -196,7 +161,6 @@ h3,h2.lh{margin:0 0 8px;font-size:.95rem}
 
 <script>
 const DATA = __DATA__;
-try { const s = new URLSearchParams(location.search).get('style'); if (s) document.documentElement.dataset.style = s; } catch (e) {}
 const fmt = n => Number(n).toLocaleString('ko-KR');
 const $ = id => document.getElementById(id);
 const NS = 'http://www.w3.org/2000/svg';
