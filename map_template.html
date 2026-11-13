@@ -59,6 +59,15 @@ svg#map path.e:hover{stroke:var(--accent);stroke-width:2.2px}
 svg#map path.e.sel{stroke:var(--accent);stroke-width:2.8px}
 svg#map path.prov{fill:none;stroke:var(--sido);stroke-width:3.2px;stroke-linejoin:round;pointer-events:none;opacity:.95;transition:opacity .3s}
 svg#map #emdLayer{transition:opacity .4s}
+svg#map .odot{cursor:pointer}
+svg#map .odot circle{vector-effect:non-scaling-stroke}
+svg#map .odot .core{fill:#ff3b30;stroke:#fff;stroke-width:2.2px;animation:dotblink 1.3s ease-in-out infinite}
+svg#map .odot .ring{fill:#e5473f;transform-box:fill-box;transform-origin:center;animation:dotping 1.3s ease-out infinite}
+@keyframes dotblink{0%,100%{opacity:1}50%{opacity:.45}}
+@keyframes dotping{0%{transform:scale(.7);opacity:.55}100%{transform:scale(2.8);opacity:0}}
+@media (prefers-reduced-motion:reduce){svg#map .odot .core,svg#map .odot .ring{animation:none}svg#map .odot .ring{opacity:.25}}
+.dotnote{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:.78rem;color:var(--muted)}
+.dotnote i{width:9px;height:9px;border-radius:50%;background:#e5473f;flex:none;animation:dotblink 1.3s ease-in-out infinite}
 svg#map text.sidolbl{font-weight:800;letter-spacing:-.02em}
 svg#map text{pointer-events:none;text-anchor:middle;dominant-baseline:central;fill:var(--ink);stroke:var(--panel);stroke-linejoin:round;paint-order:stroke;font-weight:700}
 .legend{margin-top:12px;font-size:.78rem;color:var(--muted)}
@@ -201,9 +210,10 @@ h3,h2.lh{margin:0 0 8px;font-size:.95rem}
       </div>
       <div class="crumbbar" id="crumbs"></div>
       <svg id="map" role="img" aria-label="한우 사육 지도">
-        <g id="regions"></g><g id="emdLayer"></g><path class="prov" id="borders"></path><g id="labels"></g><g id="inset"></g>
+        <g id="regions"></g><g id="emdLayer"></g><path class="prov" id="borders"></path><g id="labels"></g><g id="inset"></g><g id="dots"></g>
       </svg>
       <div class="legend" id="legend"></div>
+      <div class="dotnote" id="dotnote" hidden></div>
     </div>
 
     <div class="side">
@@ -434,7 +444,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') goUp(); });
 
 function applyView(pinName) {
   tipOff();
-  $('labels').innerHTML = ''; $('inset').innerHTML = '';
+  $('labels').innerHTML = ''; $('inset').innerHTML = ''; $('dots').innerHTML = '';
   // 시군구 층
   feats.forEach(f => {
     let op = 1, cls = 'r can';
@@ -466,7 +476,7 @@ function applyView(pinName) {
   }
   const target = view.level === 0 ? fullBox : view.level === 1 ? sidoBox(view.sido) : sgBox(view.sg);
   render();
-  animateTo(target, () => { drawLabels(); drawInset(); });
+  animateTo(target, () => { drawLabels(); drawInset(); drawDots(); });
   if (view.level === 2) setTimeout(() => { layer.style.opacity = 1; }, 120);
 }
 
@@ -673,6 +683,59 @@ function drawSidoLabels() {
     g.appendChild(el);
   });
 }
+/* ---------- 최근 발생 지역: 지도 위 깜빡이는 붉은 점 (disease_status.json 의 recent, 30일 이내) ---------- */
+const SIDO2 = {'서울': ['11'], '부산': ['21'], '대구': ['22'], '인천': ['23'], '광주': ['24'], '대전': ['25'], '울산': ['26'], '세종': ['29'],
+  '경기': ['31'], '강원': ['32'], '충북': ['33'], '충남': ['34'], '전북': ['35'], '전남': ['36'], '전남광주': ['36', '24'], '경북': ['37'], '경남': ['38'], '제주': ['39']};
+const DOT_ALIAS = {'애월': '제주시'};     // 읍면 이름으로 적힌 곳은 속한 시로
+function outbreakSpots() {
+  const D = DATA.disease, spots = new Map();
+  if (!D) return [];
+  const md = s => `${+s.slice(5, 7)}/${+s.slice(8, 10)}`;
+  D.recent.filter(r => isFresh(r.d)).forEach(r => {
+    r.loc.split(' · ').forEach(part => {
+      const i = part.indexOf(' '), codes = SIDO2[part.slice(0, i)];
+      if (!codes) return;
+      part.slice(i + 1).split('·').forEach(raw => {
+        const n = DOT_ALIAS[raw.trim()] || raw.trim(), c = feats.filter(f => codes.includes(f.code2));
+        const f = [n, n + '군', n + '시', n + '구'].map(x => c.find(g => g.name === x)).find(Boolean) || c.find(g => g.name.startsWith(n + '시'));
+        if (!f) return;
+        if (!spots.has(f.id)) spots.set(f.id, {f, items: []});
+        spots.get(f.id).items.push(`${md(r.d)} ${r.dis} (${r.sp})`);
+      });
+    });
+  });
+  return [...spots.values()];
+}
+function innerPoint(el) {                        // 경계 상자 중심이 지역 밖(섬·오목한 모양)이면, 중심에 가장 가까운 지역 안쪽 점
+  const b = el.getBBox(), cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+  if (el.isPointInFill(new DOMPoint(cx, cy))) return [cx, cy];
+  let best = null, bd = 1e18;
+  for (let i = 1; i < 24; i++) for (let j = 1; j < 24; j++) {
+    const x = b.x + b.width * i / 24, y = b.y + b.height * j / 24, d = (x - cx) ** 2 + (y - cy) ** 2;
+    if (d < bd && el.isPointInFill(new DOMPoint(x, y))) { bd = d; best = [x, y]; }
+  }
+  return best || [cx, cy];
+}
+function drawDots() {
+  const g = $('dots'), note = $('dotnote'); g.innerHTML = '';
+  const spots = view.level === 2 ? [] : outbreakSpots();
+  note.hidden = !spots.length;
+  if (!spots.length) return;
+  note.innerHTML = `<i></i><span>깜빡이는 붉은 점: 최근 30일 안에 가축질병이 발생한 시군 (${spots.length}곳) · 점에 마우스를 올리면 내용이 보입니다</span>`;
+  const k = Math.min(svg.clientWidth / box.w, svg.clientHeight / box.h) || 1, r = 8 / k;
+  spots.forEach(({f, items}) => {
+    const [x, y] = innerPoint(f.el);
+    const el = document.createElementNS(NS, 'g');
+    el.setAttribute('class', 'odot');
+    el.innerHTML = `<circle class="ring" cx="${x}" cy="${y}" r="${r}"/><circle class="core" cx="${x}" cy="${y}" r="${r * .7}"/>`;
+    const html = `<b>${f.sido} ${f.name}</b><br>${items.join('<br>')}`;
+    el.addEventListener('mouseenter', ev => tip(ev, html));
+    el.addEventListener('mousemove', ev => tip(ev, html));
+    el.addEventListener('mouseleave', tipOff);
+    el.addEventListener('click', () => f.el.dispatchEvent(new MouseEvent('click', {bubbles: true})));
+    g.appendChild(el);
+  });
+}
 function drawLabels() {
   const g = $('labels'); g.innerHTML = '';
   if (view.level === 0) { drawSidoLabels(); return; }
@@ -692,7 +755,7 @@ function drawLabels() {
     g.appendChild(t);
   });
 }
-window.addEventListener('resize', () => { drawLabels(); drawInset(); });
+window.addEventListener('resize', () => { drawLabels(); drawInset(); drawDots(); });
 
 /* ---------- 지역 선택 상자 (시도 → 시군구 → 읍면동) ---------- */
 const optHtml = (all, rows) => `<option value="">${all}</option>` + rows.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
