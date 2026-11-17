@@ -18,7 +18,7 @@
   --bg:#F5F6F6; --panel:#FFFFFF; --ink:#161A19; --ink-2:#3A403F; --muted:#59605F; --line:#E1E4E4;
   --sea:#e3edf0; --nodata:#d8d1bf; --stroke:#FFFFFF; --prov:#8A9291; --sido:#ffffff; --accent:#1F6B5E; --brand:#1E2423;
   --r0:#e4f2cf; --r1:#c6e3a0; --r2:#9fd07f; --r3:#72b45e; --r4:#489648; --r5:#2a7640; --r6:#145028;
-  --radius:6px; --radius-sm:4px; --shadow:none; --maplift:inset 0 0 0 1px #E1E4E4;
+  --primary:#256FCC; --radius:6px; --radius-sm:4px; --shadow:none; --maplift:inset 0 0 0 1px #E1E4E4;
 }
 *{box-sizing:border-box}
 :root{color-scheme:light;accent-color:var(--accent)}
@@ -43,7 +43,7 @@ select,button.btn{font:inherit;color:var(--ink);background:var(--panel);border:1
 .metricbar{margin-bottom:10px;overflow-x:auto}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;background:var(--panel)}
 .seg button{font:inherit;font-size:.85rem;color:var(--muted);background:none;border:0;padding:6px 12px;cursor:pointer}
-.seg button[aria-pressed="true"]{background:var(--brand);color:var(--panel);font-weight:600}
+.seg button[aria-pressed="true"]{background:var(--primary);color:#fff;font-weight:600}   /* 11-17 '모두 파랑': 다른 한우 앱의 고른 단추와 같은 파랑(흰 글자 5.0:1) */
 .seg button:disabled{opacity:.35;cursor:not-allowed}
 .kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 0;margin:0 0 16px}
 .kpi{padding:0 24px;min-width:0}
