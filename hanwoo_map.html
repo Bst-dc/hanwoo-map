@@ -40,6 +40,7 @@ h1{margin:0;font-family:var(--fh);font-size:1.7rem;font-weight:400;letter-spacin
 .controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:.9rem}
 .controls label{color:var(--muted)}
 select,button.btn{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-sm);padding:6px 10px}
+.metricbar{margin-bottom:10px;overflow-x:auto}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;background:var(--panel)}
 .seg button{font:inherit;font-size:.85rem;color:var(--muted);background:none;border:0;padding:6px 12px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--brand);color:var(--panel);font-weight:600}
@@ -246,17 +247,17 @@ h3,h2.lh{margin:0 0 8px;font-size:.95rem}
 <div class="wrap">
   <header>
     <div><h1>한우 사육 및 질병 발생 현황</h1><div class="asof" id="asof"></div></div>
-    <div class="controls">
-      <span class="seg" id="metricSeg" role="group" aria-label="한우 지표">
-        <button data-m="hw" title="한우 사육 두수 (KOSIS 분기, 시군구)">한우 두수</button><button data-m="hwfarm" title="한우 농가(농장) 수 (KOSIS 분기)">한우 농가</button><button data-m="hwavg" title="한우 농가 1호당 두수">농가당 두수</button><button data-m="calf" title="한육우 중 1세 미만(송아지) 비중 (KOSIS 분기)">송아지 비중</button><button data-m="big" title="100두 이상 규모 농가 수 (시군구: 공공데이터포털 15147310 연 1회, 시도·전국: KOSIS 분기)">100두+ 농가</button>
-      </span>
-    </div>
   </header>
   <div class="kpis" id="kpis"></div>
   <section class="alert" id="alert" aria-label="가축질병 위기경보" hidden></section>
 
   <div class="grid">
     <div class="card">
+      <div class="metricbar">
+      <span class="seg" id="metricSeg" role="group" aria-label="한우 지표">
+          <button data-m="hw" title="한우 사육 두수 (KOSIS 분기, 시군구)">한우 두수</button><button data-m="hwfarm" title="한우 농가(농장) 수 (KOSIS 분기)">한우 농가</button><button data-m="hwavg" title="한우 농가 1호당 두수">농가당 두수</button><button data-m="calf" title="한육우 중 1세 미만(송아지) 비중 (KOSIS 분기)">송아지 비중</button><button data-m="big" title="100두 이상 규모 농가 수 (시군구: 공공데이터포털 15147310 연 1회, 시도·전국: KOSIS 분기)">100두+ 농가</button>
+        </span>
+      </div>
       <div class="picker" role="group" aria-label="지역 선택">
         <label>시도 <select id="selSido" aria-label="시도 선택"></select></label>
         <label>시군구 <select id="selSg" aria-label="시군구 선택"></select></label>
