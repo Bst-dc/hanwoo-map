@@ -71,6 +71,14 @@ select,button.btn{font:inherit;color:var(--ink);background:var(--panel);border:1
 svg#map{width:100%;height:auto;display:block;background:var(--sea);border-radius:max(2px,calc(var(--radius) - 4px));box-shadow:var(--maplift);transition:background .3s}
 svg#map path{vector-effect:non-scaling-stroke}
 svg#map path.r,svg#map path.e{fill:var(--nodata)}      /* 색이 입혀지기 전 시작색 (기본 검정이 밝은 화면에서 번쩍이지 않게) */
+.mapwrap{position:relative}
+svg#map.zoomed{cursor:grab}
+svg#map.panning{cursor:grabbing}
+.zoombtn{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);overflow:hidden}
+.zoombtn button{font:inherit;font-size:1.05rem;line-height:1;width:32px;height:32px;border:0;background:none;color:var(--ink);cursor:pointer}
+.zoombtn button+button{border-top:1px solid var(--line)}
+.zoombtn button:hover{background:var(--sea)}
+.zoomhint{position:absolute;left:10px;bottom:8px;font-size:.72rem;color:var(--muted);opacity:.85;pointer-events:none;background:var(--panel);padding:1px 6px;border-radius:6px}
 svg#map path.r{stroke:var(--stroke);stroke-width:.7px;cursor:pointer;transition:opacity .3s,fill .3s}
 svg#map path.r.pick{stroke:var(--accent);stroke-width:2.8px}
 svg#map path.r.can:hover{stroke:var(--accent);stroke-width:2px}
@@ -264,9 +272,17 @@ h3,h2.lh{margin:0 0 8px;font-size:.95rem}
         <label>읍면동 <select id="selEmd" aria-label="읍면동 선택"></select></label>
       </div>
       <div class="crumbbar" id="crumbs"></div>
+      <div class="mapwrap">
       <svg id="map" role="img" aria-label="한우 사육 및 질병 발생 지도">
         <g id="regions"></g><g id="emdLayer"></g><path class="prov" id="borders"></path><g id="labels"></g><g id="inset"></g><g id="dots"></g>
       </svg>
+      <div class="zoombtn" role="group" aria-label="지도 확대·축소">
+        <button type="button" data-z="in" title="확대" aria-label="확대">+</button>
+        <button type="button" data-z="out" title="축소" aria-label="축소">−</button>
+        <button type="button" data-z="home" title="처음 크기로" aria-label="처음 크기로">⟲</button>
+      </div>
+      <span class="zoomhint">Ctrl+휠 확대 · 끌어서 이동</span>
+      </div>
       <div class="legend" id="legend"></div>
       <div class="dotnote" id="dotnote" hidden></div>
     </div>
@@ -843,6 +859,48 @@ function drawLabels() {
   });
 }
 window.addEventListener('resize', () => { drawLabels(); drawInset(); drawDots(); });
+
+/* ---------- 자유 확대·이동 (휠은 Ctrl+휠, 끌기, 오른쪽 아래 단추) ---------- */
+const homeBox = () => view.level === 0 ? fullBox : view.level === 1 ? sidoBox(view.sido) : sgBox(view.sg);
+let zRedraw = 0, dragMoved = false;
+function zoomApply(b) {
+  const f = fullBox;
+  b.x = Math.min(Math.max(b.x, f.x - b.w / 2), f.x + f.w - b.w / 2);          // 지도 밖으로 너무 끌려 나가지 않게
+  b.y = Math.min(Math.max(b.y, f.y - b.h / 2), f.y + f.h - b.h / 2);
+  cancelAnimationFrame(anim); setBox(b);
+  svg.classList.toggle('zoomed', b.w < homeBox().w * .999 || b.w > homeBox().w * 1.001);
+  cancelAnimationFrame(zRedraw);
+  zRedraw = requestAnimationFrame(() => { drawLabels(); drawInset(); drawDots(); });
+}
+function zoomAt(factor, cx, cy) {
+  const h = homeBox(), nw = Math.min(fullBox.w, Math.max(h.w / 10, box.w / factor)), s = nw / box.w;
+  zoomApply({x: cx - (cx - box.x) * s, y: cy - (cy - box.y) * s, w: nw, h: box.h * s});
+}
+const svgPt = ev => { const m = svg.getScreenCTM().inverse(); return new DOMPoint(ev.clientX, ev.clientY).matrixTransform(m); };
+svg.addEventListener('wheel', ev => {
+  if (!(ev.ctrlKey || ev.metaKey)) return;                                      // 그냥 휠은 페이지 스크롤 그대로
+  ev.preventDefault(); tipOff();
+  const p = svgPt(ev); zoomAt(Math.exp(-ev.deltaY * .0025), p.x, p.y);
+}, {passive: false});
+document.querySelector('.zoombtn').addEventListener('click', ev => {
+  const z = ev.target.closest('button')?.dataset.z; if (!z) return;
+  if (z === 'home') { animateTo(homeBox(), () => { svg.classList.remove('zoomed'); drawLabels(); drawInset(); drawDots(); }); return; }
+  zoomAt(z === 'in' ? 1.6 : 1 / 1.6, box.x + box.w / 2, box.y + box.h / 2);
+});
+svg.addEventListener('pointerdown', ev => {
+  if (ev.button !== 0 || ev.pointerType !== 'mouse') return;
+  const sx = ev.clientX, sy = ev.clientY, b0 = {...box}, k = svg.getScreenCTM().a;
+  dragMoved = false;
+  const move = e => {
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    if (!dragMoved && Math.hypot(dx, dy) < 5) return;
+    if (!dragMoved) { dragMoved = true; svg.classList.add('panning'); tipOff(); }
+    zoomApply({x: b0.x - dx / k, y: b0.y - dy / k, w: b0.w, h: b0.h});
+  };
+  const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); svg.classList.remove('panning'); };
+  window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+});
+svg.addEventListener('click', ev => { if (dragMoved) { ev.stopPropagation(); ev.preventDefault(); dragMoved = false; } }, true);   // 끌고 놓았을 때 지역 클릭으로 오인하지 않게
 
 /* ---------- 지역 선택 상자 (시도 → 시군구 → 읍면동) ---------- */
 const optHtml = (all, rows) => `<option value="">${all}</option>` + rows.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
