@@ -889,7 +889,7 @@ function renderAlert() {
   const md = s => `${+s.slice(5, 7)}/${+s.slice(8, 10)}`;
   const cls = {'구제역': 'fmd', '럼피스킨': 'lsd', '결핵병': 'tb'};
   el.innerHTML = `<div>
-      <div class="ah"><h2>가축질병 위기경보 단계</h2><small>기준 ${D.asof.replace(/-/g, '.')}</small>${age >= 3 ? `<small class="stale">⚠ ${age}일 전 자료</small>` : ''}</div>
+      <div class="ah"><h2>가축질병 위기경보 단계</h2><small>기준 ${D.asof.replace(/-/g, '.')}${D.asofTime ? ' ' + D.asofTime : ''}</small>${age >= 3 ? `<small class="stale">⚠ ${age}일 전 자료</small>` : ''}</div>
       <div class="gs">${D.gauges.map(g => `<div class="g1"><div class="gh"><b>${g.name}</b><span class="pill l${g.level}">${LVNAME[g.level]}</span></div>${gaugeSvg(g.level, g.name)}
         <div class="dt">${g.detail}</div><div class="st">${g.stat}</div><span class="bs ${g.basis}">${g.basisText}</span></div>`).join('')}</div>
       <div class="src">${D.lumpy} · 출처: ${D.sources.map(s => `<a href="${s.url}" target="_blank" rel="noopener noreferrer">${s.name}</a>`).join(' · ')}</div>
