@@ -330,7 +330,20 @@ def fetch_all(fetched):
                 sys.exit("[오류] 필수 자료가 없어 중단합니다.")
 
 
+def patch_disease():
+    """--disease-only: data/ 없이, 이미 만든 hanwoo_map.html 안의 질병 현황(disease)만 바꾼다."""
+    html = OUT.read_text(encoding="utf-8")
+    key = '"disease":'
+    i = html.index(key) + len(key)
+    _, j = json.JSONDecoder().raw_decode(html, i)
+    new = json.dumps(json.loads(DISEASE.read_text(encoding="utf-8")), ensure_ascii=False, separators=(",", ":"))
+    OUT.write_text(html[:i] + new + html[j:], encoding="utf-8")
+    print(f"질병 현황만 갱신: {OUT.name}")
+
+
 def main():
+    if "--disease-only" in sys.argv:
+        return patch_disease()
     offline = "--offline" in sys.argv
     for p in (GEO, TEMPLATE):
         if not p.exists():

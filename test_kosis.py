@@ -90,6 +90,8 @@ def test_disease_status():
 
 
 if __name__ == "__main__":
+    if "--disease-only" in sys.argv:      # 홈서버: data/ 없이 질병 현황만 검사
+        test_disease_status(); print("통과: test_disease_status"); sys.exit(0)
     for fn in (test_synthetic, test_real_data, test_nier_synthetic, test_nier_real, test_disease_status):
         fn()
         print("통과:", fn.__name__)
