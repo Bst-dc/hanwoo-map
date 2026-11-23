@@ -2,6 +2,10 @@
 # 가축질병 현황 자동 갱신 (홈서버 cron용). 07·11·15·19·23시에 실행.
 # 흐름: 최신 받기 → claude -p 로 disease_status.json 갱신 → 테스트 → 지도 재생성 → 커밋·푸시
 set -u
+# cron은 매시 정각에 부르고, 한국시간(KST) 07·11·15·19·23시만 실제로 갱신한다(서버 시간대와 무관). 수동 실행은 --now.
+if [ "${1:-}" != "--now" ]; then
+  case "$(TZ=Asia/Seoul date +%H)" in 07|11|15|19|23) ;; *) exit 0 ;; esac
+fi
 export HOME=/DATA/Documents/work/home
 export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin"
 export GIT_SSH_COMMAND="ssh -F $HOME/.ssh/config -o BatchMode=yes"
