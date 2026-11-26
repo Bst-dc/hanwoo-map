@@ -336,8 +336,10 @@ def patch_disease():
     key = '"disease":'
     i = html.index(key) + len(key)
     _, j = json.JSONDecoder().raw_decode(html, i)
-    new = json.dumps(json.loads(DISEASE.read_text(encoding="utf-8")), ensure_ascii=False, separators=(",", ":"))
-    OUT.write_text(html[:i] + new + html[j:], encoding="utf-8")
+    new = json.dumps(json.loads(DISEASE.read_text(encoding="utf-8")), ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    tmp = OUT.with_suffix(".tmp")
+    tmp.write_text(html[:i] + new + html[j:], encoding="utf-8")
+    tmp.replace(OUT)
     print(f"질병 현황만 갱신: {OUT.name}")
 
 
@@ -366,7 +368,7 @@ def main():
     data = build_data(geo, fetched, hw_rows, kosis, nier, disease)
 
     html = TEMPLATE.read_text(encoding="utf-8").replace(
-        "__DATA__", json.dumps(data, ensure_ascii=False, separators=(",", ":")))
+        "__DATA__", json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/"))
     OUT.write_text(html, encoding="utf-8")
 
     print(f"\n지도 갱신 완료: {OUT}")

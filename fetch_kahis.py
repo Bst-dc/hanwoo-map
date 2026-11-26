@@ -5,7 +5,8 @@
 - KAHIS 표에 없는 'H5형 AI 항원 확인'(농식품부 화면 기준) 줄은 기존 값을 30일 안에서 유지한다.
 사용: python3 fetch_kahis.py [--dry]   (--dry: 파일을 쓰지 않고 요약만 출력)
 """
-import datetime, html, json, logging, re, sys, time, urllib.parse, urllib.request
+import datetime, html, json, logging, os, re, sys, time, urllib.parse, urllib.request
+from zoneinfo import ZoneInfo
 from collections import OrderedDict
 from pathlib import Path
 
@@ -49,9 +50,14 @@ def parse_rows(s):
 def place(addr):
     """주소 → (시도 약칭, 시군, '시군 읍면동' 또는 None). 리·번지는 버린다."""
     t = addr.split()
-    if len(t) < 2 or t[0] not in SIDO:
+    if not t or t[0] not in SIDO:
         return None
+    if len(t) < 2:                            # 시도만 있는 주소
+        return SIDO[t[0]], SIDO[t[0]], None
     sido = SIDO[t[0]]
+    if sido == "세종":                        # 시군구 없이 바로 읍면동
+        emd = next((x for x in t[1:] if re.fullmatch(r"\S+[읍면동]", x)), None)
+        return sido, "세종", (f"세종시 {emd}" if emd else None)
     sg = next((x for x in t[1:] if re.fullmatch(r"\S+[시군]", x)), None)
     if sg is None:                            # 광역시: 구·군
         sg = t[1]
@@ -63,9 +69,8 @@ def group(rows):
     g = OrderedDict()
     for dis, addr, d, sp in rows:
         p = place(addr)
-        if not p:
-            log.warning("주소 해석 못 함: %s", addr.split()[0] if addr else "")
-            continue
+        if not p:                                 # 조용한 누락 방지: 하나라도 못 읽으면 중단
+            raise SystemExit(f"[오류] 주소를 해석하지 못함(시도 '{addr.split()[0] if addr else ''}') — 파일을 바꾸지 않음")
         sido, sgs, emd = p
         k = (d, DIS.get(dis, dis), sp.split("-")[-1])
         e = g.setdefault(k, {"sg": OrderedDict(), "emd": []})
@@ -76,7 +81,7 @@ def group(rows):
             e["emd"].append(emd)
     res = []
     for (d, dis, sp), e in g.items():
-        loc = " · ".join(f"{s} {'·'.join(v)}" for s, v in e["sg"].items())
+        loc = " · ".join(s if v == [s] else f"{s} {'·'.join(v)}" for s, v in e["sg"].items())
         r = {"d": d, "dis": dis, "sp": sp, "loc": loc}
         if e["emd"]:
             r["emd"] = e["emd"]
@@ -86,13 +91,13 @@ def group(rows):
 
 def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
-    today = datetime.date.today()
+    today = datetime.datetime.now(ZoneInfo("Asia/Seoul")).date()   # 서버 시간대와 무관하게 한국 날짜
     frm, to = (today - datetime.timedelta(days=DAYS)).isoformat(), today.isoformat()
     first = fetch_page(1, frm, to)
-    m = re.search(r"전체 : (\d+)건\((\d+)쪽/(\d+)쪽\)", first)
+    m = re.search(r"전체 : ([\d,]+)건\((\d+)쪽/(\d+)쪽\)", first)
     if not m:
         raise SystemExit("[오류] 전체 건수를 못 찾음 — KAHIS 화면 구조가 바뀐 듯")
-    total, pages = int(m.group(1)), int(m.group(3))
+    total, pages = int(m.group(1).replace(",", "")), int(m.group(3))
     rows = parse_rows(first)
     for p in range(2, pages + 1):
         time.sleep(0.5)
@@ -110,7 +115,9 @@ def main():
     if "--dry" in sys.argv:
         return
     d["recent"] = recent
-    DISEASE.write_text(json.dumps(d, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    tmp = DISEASE.with_suffix(".tmp")           # 쓰다 끊겨도 원본이 깨지지 않게 임시 파일 → 교체
+    tmp.write_text(json.dumps(d, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    os.replace(tmp, DISEASE)
     log.info("disease_status.json recent 갱신")
 
 

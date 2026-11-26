@@ -12,14 +12,16 @@ export GIT_SSH_COMMAND="ssh -F $HOME/.ssh/config -o BatchMode=yes"
 cd /DATA/Documents/work/hanwoo-map || exit 1
 LOG=data/refresh_disease.log; mkdir -p data
 exec 9>/tmp/hanwoo_refresh.lock; flock -n 9 || { echo "$(date '+%F %T') 이미 실행 중" >>"$LOG"; exit 0; }
-log() { echo "$(date '+%F %T') $*" >>"$LOG"; }
+log() { echo "$(TZ=Asia/Seoul date '+%F %T') $*" >>"$LOG"; }
+restore() { git checkout -- disease_status.json hanwoo_map.html 2>/dev/null; }
 
 log "시작"
-git pull --rebase --autostash -q >>"$LOG" 2>&1 || { log "pull 실패 — 중단"; exit 1; }
+git pull --rebase --autostash -q >>"$LOG" 2>&1 || { log "pull 실패 — 중단"; git rebase --abort 2>/dev/null; exit 1; }
 cp disease_status.json /tmp/disease_status.bak
 
 # 최근 발생(recent)은 KAHIS 전 쪽을 스크립트가 직접 받아 묶는다(claude는 첫 쪽만 읽어 누락했음)
-python3 fetch_kahis.py >>"$LOG" 2>&1 || log "KAHIS 수집 실패 — recent 는 이전 값 유지"
+# 수집이 실패하면 갱신 시각만 최신으로 올라가는 일이 없게 이번 회차 전체를 건너뛴다(3일 넘으면 화면에 경고)
+python3 fetch_kahis.py >>"$LOG" 2>&1 || { log "KAHIS 수집 실패 — 이번 회차 건너뜀"; restore; exit 1; }
 
 timeout 1200 claude -p "$(cat disease_refresh_prompt.md)" \
   --permission-mode acceptEdits \
@@ -28,14 +30,14 @@ timeout 1200 claude -p "$(cat disease_refresh_prompt.md)" \
 
 if ! python3 -m json.tool disease_status.json >/dev/null 2>&1 \
    || ! python3 test_kosis.py --disease-only >>"$LOG" 2>&1; then
-  log "검사 실패 — 이전 파일로 되돌림"; cp /tmp/disease_status.bak disease_status.json; exit 1
+  log "검사 실패 — 이전 파일로 되돌림"; restore; exit 1
 fi
 if git diff --quiet -- disease_status.json; then log "변경 없음"; exit 0; fi
 
-python3 update_map.py --disease-only >>"$LOG" 2>&1 || { log "지도 재생성 실패 — 되돌림"; git checkout -- disease_status.json; exit 1; }
-if grep -q "DATA_GO_KR_KEY\|KOSIS_API_KEY" disease_status.json; then log "키 흔적 — 중단"; exit 1; fi
+python3 update_map.py --disease-only >>"$LOG" 2>&1 || { log "지도 재생성 실패 — 되돌림"; restore; exit 1; }
+if grep -q "DATA_GO_KR_KEY\|KOSIS_API_KEY" disease_status.json; then log "키 흔적 — 중단"; restore; exit 1; fi
 git add disease_status.json hanwoo_map.html
-git commit -q -m "data: 가축질병 현황 자동 갱신 ($(date '+%F %H')시)
+git commit -q -m "data: 가축질병 현황 자동 갱신 ($(TZ=Asia/Seoul date '+%F %H')시)
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" >>"$LOG" 2>&1
 git push -q >>"$LOG" 2>&1 && log "푸시 완료" || log "푸시 실패"

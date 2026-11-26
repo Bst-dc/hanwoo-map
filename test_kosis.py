@@ -87,6 +87,11 @@ def test_disease_status():
             assert re.fullmatch(r"\S+[시군구] \S+[읍면동]", s) and not s.endswith("리"), f"읍면동 형식 오류: {s}"
     assert [r["d"] for r in d["recent"]] == sorted((r["d"] for r in d["recent"]), reverse=True), "최신순"
     assert d["sources"] and all(s["url"].startswith("https://") for s in d["sources"])
+    for r in d["recent"]:      # 시군(loc)에도 리·번지·농장 표현이 없어야 함
+        assert not re.search(r"[0-9]|\S리(\s|$)|농장|목장|영농|축산", r["loc"]), f"loc 에 주소·농장 흔적: {r['loc']}"
+    for g in d["gauges"]:      # 웹에서 읽은 문구가 섞이는 칸: 길이·태그 제한
+        for k in ("detail", "stat", "basisText"):
+            assert len(g[k]) <= 80 and not re.search(r"[<>]", g[k]), f"게이지 {k} 이상: {g[k][:30]}"
 
 
 if __name__ == "__main__":
