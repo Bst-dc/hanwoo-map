@@ -41,7 +41,8 @@ def parse_rows(s):
     for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", s, re.S):
         c = [re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", "", x))).strip() for x in re.findall(r"<td[^>]*>(.*?)</td>", tr, re.S)]
         if len(c) >= 6 and re.match(r"\d{4}-\d\d-\d\d", c[3]):
-            out.append((c[0], c[2], c[3][:10], c[4]))
+            m = re.search(r"\((\d{4}-\d\d-\d\d)\)", c[3])      # "발생일 (진단일)" → 진단일 사용(KAHIS 조회·정렬 기준)
+            out.append((c[0], c[2], m.group(1) if m else c[3][:10], c[4]))
     return out
 
 
