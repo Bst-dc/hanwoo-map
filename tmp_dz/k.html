@@ -1,0 +1,905 @@
+
+
+
+
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ko" lang="ko">
+
+<head>
+<title>국가가축방역통합시스템</title>
+
+
+
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="x-ua-compatible" content="IE=edge, chrome=1" />
+<script type="text/javascript" src="/js/home/common/common.js"></script>
+<script type="text/javascript" src="/js/home/common/jquery-1.7.2.js"></script>
+<script type="text/javascript" src="/js/home/common/jquery-ui.js"></script>
+<script type="text/javascript" src="/js/home/common/Flash_Writer.js"></script>
+<script type="text/javascript" src="/js/home/lkntscrinfo/lkntscrinfo.js"></script>
+<!--// 2018 추가된 스크립트, css -->
+<!--<script type="text/javascript" src="/js/home/common/gnb.js"></script>-->
+<!--<script src="/js/home/common/jquery-1.11.3.min.js"></script>-->
+<script type="text/javascript" src="/js/home/common/jquery.easing.1.3_new.js"></script>
+<script type="text/javascript" src="/js/home/common/jquery.bxslider.js"></script>
+<script type="text/javascript" src="/js/home/common/Backstretch.js"></script>
+<script type="text/javascript" src="/js/home/common/2018gnb.js"></script>
+<link href="/css/dpl/kahis2018.css" rel="stylesheet" type="text/css" />
+<!-- //2018 추가된 스크립트, css-->   
+<link href="/css/dpl/jquery-ui.css" rel="stylesheet" type="text/css" />
+
+<script type="text/javascript" src="/js/sce_comUtil.js"></script>
+
+
+
+
+<script language="javascript" src="/ClipReport4/rexpert_properties_Clip4.js"></script></script>  <!-- 오탈자제거 김윤수 210824 -->
+
+<script language="JavaScript">
+        (function($) {
+        $.fn.prettynumber = function(options) {
+            var opts = $.extend({}, $.fn.prettynumber.defaults, options);
+            return this.each(function() {
+                $this = $(this);
+                var o = $.meta ? $.extend({}, opts, $this.data()) : opts;
+                var str = $this.html();
+                $this.html($this.html().toString().replace(new RegExp("(^\\d{"+($this.html().toString().length%3||-1)+"})(?=\\d{3})"),"$1"+o.delimiter).replace(/(\d{3})(?=\d)/g,"$1"+o.delimiter));
+            });
+        };
+        $.fn.prettynumber.defaults = {
+            delimiter       : ','   
+        };
+    })(jQuery);
+    
+</script>
+
+<script type="text/javascript">
+    function fn_page_link(pageNO){
+        document.listForm.pageIndex.value = pageNO;
+        document.listForm.occrFromDt.value = "2025-11-26";
+        document.listForm.occrToDt.value = "2026-11-26";
+        document.listForm.lstkspCl.value = "";
+        document.listForm.ctprvn.value = "";
+        document.listForm.signgu.value = "";
+        document.listForm.dissCl.value = "";
+        document.listForm.legalIctsdGradSe.value = "";
+        document.listForm.action = "/home/lkntscrinfo/selectLkntsOccrrncList.do";
+        document.listForm.submit();
+    }
+    
+    function fn_select_occrList(){        
+        var occrFromDt = $("input:[id=occrFromDtId]").val();
+        var occrToDt   = $("input:[id=occrToDtId]").val();
+        
+        if(occrFromDt > occrToDt){
+            alert("시작일자와 종료일자를 확인해주십시오.");
+            return;
+        }
+        
+        document.listForm.pageIndex.value = 1;
+        document.listForm.action = "/home/lkntscrinfo/selectLkntsOccrrncList.do";
+        document.listForm.submit();
+    }
+
+    function ajaxLegaldong(value){            
+        var ctprvn = $("#ctprvn option:selected").val();
+        var signgu = '';
+        var emd = '';   
+   
+        if(value != 'ctprvn'){
+            signgu = $("#signgu option:selected").val();    
+        }
+   
+        if(value != 'ctprvn'){
+            $("#emd option:selected").val();    
+        }
+
+        var li = '';
+   
+        var url = "/home/common/selectLegaldongList.do";
+   
+        var param = "ctprvn="
+                  + ctprvn
+                  + "&signgu="
+                  + signgu
+                  + "&emd="
+                  + emd
+                  + "&li="
+                  + li
+                  + "&flag=signgu";
+
+        $.ajax({
+            type:"post",
+            url: url,  
+            data: param,
+            success: function(responseData){
+                $("#ajaxLegaldong").html(responseData);
+            },
+            error: function(e){
+                alert(e);
+            }
+        });
+    }
+    
+
+    function fnPrint() {
+        
+        if('10' == 0) {
+            alert('출력할 데이터가 존재하지 않습니다.');
+            return;
+        }
+        
+        var rexpertView = document.getElementById("rexpertView");
+        var dissCl     = $("#dissCl option:selected").val();    
+        var turmGubun  = $(':radio[name="turmGubun"]:checked').val();
+        var occrFromDt = $("input:[name=occrFromDt]").val(); 
+        var occrToDt   = $("input:[name=occrToDt]").val(); 
+        var lstkspCl   = $("#lstkspCl option:selected").val();
+        var ctprvn     = $("#ctprvn option:selected").val(); 
+        var signgu     = $("#signgu option:selected").val(); 
+        var legalIctsdGradSe     = $("#legalIctsdGradSe option:selected").val(); 
+        
+        var cnt         = "8";
+        
+        if (dissCl == undefined ) dissCl = "" ;
+        if (turmGubun == undefined ) turmGubun = "" ;
+        if (lstkspCl == undefined ) lstkspCl = "" ;
+        if (ctprvn == undefined ) ctprvn = "" ;
+        if (ctprvn == " " ) ctprvn = "" ;
+        if (signgu == undefined ) signgu = "" ;
+        if (signgu == " " ) signgu = "" ;
+        if (legalIctsdGradSe == undefined ) legalIctsdGradSe = "" ;
+        occrFromDt = occrFromDt.replace(/-/g,"");
+        occrToDt = occrToDt.replace(/-/g,"");
+        
+        
+        
+        var lv_rprUrl = "";
+        
+        // REXPERT3
+        // lv_rprUrl += rex_gsRexServiceRootURL + "rebfiles/rViewer_web.jsp?cnt="+cnt;
+        // lv_rprUrl += "&rptname=" + rex_gsRexServiceRootURL + "rebfiles/lds/occrrepr/RP_LDS_1081" ;
+        
+        // REXPERT4
+        lv_rprUrl += rex_gsRexServiceRootURL + "rViewer_web.jsp?cnt="+cnt;
+        lv_rprUrl += "&rptname=" + "lds/occrrepr/RP_LDS_1081" ;
+    
+        lv_rprUrl += "&r0=" + dissCl;
+        lv_rprUrl += "&r1=" + turmGubun;
+        lv_rprUrl += "&r2=" + occrFromDt;
+        lv_rprUrl += "&r3=" + occrToDt;
+        lv_rprUrl += "&r4=" + lstkspCl;
+        lv_rprUrl += "&r5=" + ctprvn;
+        lv_rprUrl += "&r6=" + signgu;
+        lv_rprUrl += "&r7=" + legalIctsdGradSe;
+          
+        // REXPERT3
+        // rexpertView.src = lv_rprUrl;
+
+        // REXPERT4
+        window.open(lv_rprUrl, "", "center=yes,scrollbars=no,status=no,toolbar=no,resizable=1,location=no,menu=no,width=825,height=600");
+        
+    }    
+</script>
+</head>
+
+<body id="subWrap" onload="clickshow(1);">
+<!-- s: header -->
+
+
+
+<header id="header">
+	<div class="pcWrap">
+		<div class="headerWrap">
+			<h1><a href="/"><img src="/images/dpl/img2018/logo.png" alt="가축방역시스템"></a></h1>
+		</div>
+	
+	     <div class="lnb lnb5" >
+	        <ul>
+	            <li class="">
+	                <a href="/home/intrcn/intrcn_m1_01.do">KAHIS 소개</a>
+					<ul style="display: none;" class="">
+						<li><a href="/home/intrcn/intrcn_m1_01.do">KAHIS</a></li>
+						<li><a href="/home/sce/sce_m1_01.do">축산차량등록제</a></li>
+					</ul>
+	            </li>
+	            <li class="" style="width: 115px;">
+	                <a href="/home/lkdissinfo/ani_m1_01.do">가축질병정보</a>
+	                <ul style="display: none;" class="">
+	                    <li><a href="/home/lkdissinfo/ani_m1_01.do">가축방역안내</a></li>
+	                    <li><a href="https://www.apqa.go.kr/animal/prevent/ani_birdflu_center.jsp" target="_blank">가축방역기관안내</a></li>
+	                    <li><a href="/home/lkdissinfo/ani_m2_01.do">돼지열병</a></li>
+	                    <li><a href="https://www.apqa.go.kr/animal/prevent/ani_africa_pig_fever.jsp" target="_blank">아프리카 돼지열병(ASF)</a></li>
+	                    <li><a href="/home/lkdissinfo/ani_m3_01.do">구제역</a></li>
+	                    <li><a href="/home/lkdissinfo/ani_m4_01.do">소해면상뇌증(BSE)</a></li>
+	                    <li><a href="https://www.apqa.go.kr/animal/prevent/lumpyskin_001.jsp" target="_blank">럼피스킨(LSD)</a></li>
+	                    <li><a href="/home/lkdissinfo/ani_m5_01.do">조류인플루엔자</a></li>
+	                    <li><a href="/home/lkdissinfo/ani_m6_01.do">광견병</a></li>
+	                    <li><a href="/home/lkdissinfo/disease_m7_01livestock.do">축종별가축질병</a></li>
+	                    <li><a href="/home/lkdissinfo/disease_m8_01book.do">가축질병백과</a></li>
+	                    <!-- 2025.05.28 신수진 선생님 요청으로 안보이게 처리 - 기존에 접근권한 없습니다. 메시지 나타남(원인은 모름)	                    
+	                    <li><a href="http://www.kahis.go.kr:8201/gis/actionDsfncMain.do" target="_blank">인근농가현황</a></li>
+	                    -->
+	                </ul>
+	            </li>
+	            <li class="" style="width: 155px;">
+	                <a href="/home/lkntscrinfo/selectLkntsOccrrncList.do" class="oneD menu3">가축전염병 발생정보</a>
+	                <ul style="display: none;" class="">
+						<li><a href="/home/lkntscrinfo/selectLkntsOccrrncList.do">국내현황</a></li>
+						<li><a href="/home/lkdissinfo/lkdissinfoBbsList.do?type=1_5hwwsdx">국외현황</a></li>
+	                </ul>
+	            </li>
+	            <li class="" style="width: 115px;">
+	                <a href="/home/recsroom/selectRecsroomBbsList.do?bbsFlag=notice" class="oneD menu4">KAHIS 자료실</a>
+	                <ul style="display: none;" class="">
+	                	<li><a href="/home/recsroom/selectRecsroomBbsList.do?bbsFlag=notice">공지사항</a></li>
+	                    <li><a href="/home/recsroom/selectRecsroomBbsList.do?bbsFlag=law">가축방역 법령정보</a></li>
+						<li><a href="/home/recsroom/selectRecsroomBbsList.do?bbsFlag=info">방역자료실</a></li>
+						
+						
+	                </ul>
+	            </li>
+	            <li class="" style="width: 115px;">
+	               <a href="/home/recsroom/selectRecsroomBbsList.do?bbsFlag=faq" class="oneD menu5">사용자 게시판</a>
+                    <ul style="display: none;" class="">
+                        <li><a href="/home/recsroom/selectRecsroomBbsList.do?bbsFlag=faq">자주하는질문(FAQ)</a></li>
+                    </ul>
+	            </li>
+	            
+	        </ul>
+	    </div>
+	</div>
+</header>
+
+<!-- e: header -->
+
+<!-- s: sub_contents -->
+<div id="sub_contents">
+    <div class="guide_titimg"></div>
+
+    <!-- //contents start -->
+    <div id="contentsWrap">
+        <!-- //left_menu start -->  
+        
+
+<script type="text/javascript">              
+    function clickshow(num) {
+        for (i=1; i<3; i++) {
+         menu=eval("document.all.block"+i+".style");
+         if (num==i) {
+				$('#block'+i).addClass("on");
+         }else{
+               $('#block'+i).removeClass("on");
+           }
+        }
+    };
+</script>
+
+<div id="submenuWrap_8">
+	<h1 class="left_title"><div style="padding-top:11px;line-height: 25px;">가축전염병<br>발생정보</div></h1>
+	<ul class="left_menu">
+	    <li id="block1"><a href="/home/lkntscrinfo/selectLkntsOccrrncList.do">국내현황</a>
+	        <ul>
+	            <li><a href="/home/lkntscrinfo/selectLkntsOccrrncList.do">법정가축전염병 발생현황</a></li>
+	            <li><a href="/home/lkntscrinfo/selectLsdOccrrncList.do">럼피스킨 발생현황</a></li>
+	            <li><a href="/home/lkntscrinfo/selectLkntsOccrrnc.do">법정가축전염병 발생통계</a></li>
+	            
+	        </ul>
+	    </li>
+	    <li id="block2"><a href="/home/lkdissinfo/lkdissinfoBbsList.do?type=1_5hwwsdx">국외현황</a>
+	        <ul>
+	            <li><a href="/home/lkdissinfo/lkdissinfoBbsList.do?type=1_5hwwsdx">해외위생정보 동향</a></li>
+	        </ul>                
+	    </li>
+	</ul>
+	<!-- left common end -->
+</div> 
+        <!-- //left_menu end -->
+        
+        <!--로케이션    -->
+        <div class="location">
+            <p>
+                <a href="/"><img src="/images/dpl/img2018/history_home.png" alt="HOME"></a>
+                &gt; 
+                <strong class="current">가축전염병 발생정보</strong>
+                &gt; 
+                <strong class="current"> 국내현황</strong>
+                &gt; 
+                <strong class="current"> 법정가축전염병 발생현황</strong>
+            </p>
+            <h1 class="content_title">법정가축전염병 발생현황</h1>
+        </div>
+        <!--로케이션    -->
+        
+        <!--      기존 콘텐츠 테이블이 들어가는 부분 시작     -->
+        <div class="oldtable"> 
+    
+            <form id="homeLkntscrinfoVO" name="pagingForm" action="/home/lkntscrinfo/selectLkntsOccrrncList.do;jsessionid=YgBIN9prINFw1CzZM4iLQ1EnClSzEsay3E5daWof56DEethbjGLa9cubCoqchxwZ.exdplwas1_servlet_kahis2" method="post">
+            <input id="pageIndex" name="pageIndex" type="hidden" value="1"/>
+            <input id="occrFromDt" name="occrFromDt" type="hidden" value="2025-11-26"/>
+            <input id="occrToDt" name="occrToDt" type="hidden" value="2026-11-26"/>
+            <input id="lstkspCl" name="lstkspCl" type="hidden" value=""/>
+            <input id="dissCl" name="dissCl" type="hidden" value=""/>
+            <input id="legalIctsdGradSe" name="legalIctsdGradSe" type="hidden" value=""/>
+            </form>
+
+            <form id="homeLkntscrinfoVO" name="listForm" action="/home/lkntscrinfo/selectLkntsOccrrncList.do;jsessionid=YgBIN9prINFw1CzZM4iLQ1EnClSzEsay3E5daWof56DEethbjGLa9cubCoqchxwZ.exdplwas1_servlet_kahis2" method="post">
+            <input id="pageIndex" name="pageIndex" type="hidden" value="1"/>
+
+            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom:10px">
+                <tr>
+                    <td align="left" class="list_g_line list_g_line2"><table width="100%" border="0" cellspacing="0" cellpadding="0"  style="margin-top:15px; margin-right:15px; margin-bottom:15px; margin-left:15px; " class="font_height18">
+                        <tr>
+                            <td>□ 공개 근거 : 가축전염병예방법 제3조의2 및 같은 법 시행령 제2조의2<br>
+                            &nbsp;&nbsp;&nbsp;○ 가축전염병을 예방하고 그 확산을 방지하기 위하여 농장에 대한 가축전염병 발생 일시 및 농장명 등을 공개<br>
+                            &nbsp;&nbsp;&nbsp;○ 공개 대상 가축전염병 : 구제역, 돼지열병, 돼지오제스키병, 돼지생식기호흡기 증후군, 브루셀라병, 결핵병, <br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;고병원성조류인플루엔자, 추백리, 가금티푸스, 뉴캣슬병, 사슴만성소모성질병, 낭충봉아부패병, 아프리카돼지열병<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;럼피스킨<br>
+                            &nbsp;&nbsp;&nbsp;○ 공개 대상 가축 : 소, 산양, 면양, 돼지, 닭, 사슴, 오리, 거위, 칠면조, 메추리, 염소, 기러기, 관상조류<br><br>
+                            ※ 발생현황 정보는 시&middot;도 가축방역기관 등 가축질병 병성감정기관의 가축전염병 발생보고를 바탕으로 제공하고 있으며, <br>&nbsp;&nbsp;&nbsp;&nbsp;상기 목적 외 해당 정보의 사용을 금함<br>
+                            ※ 발생두수는 가축전염병 통계확정 전 까지 변동될 수 있음
+                            <br>※ 낭충봉아부패병은 2017년 09월 22일 자료부터 조회가능합니다. <br></td>
+                        </tr>
+                    </table></td>
+                </tr>
+            </table>
+
+            <table width="100%"  border="0" cellspacing="0" cellpadding="0" style="height:10px; margin-bottom:5px"  >
+                <tr>
+                    <td align="right"><img src="/images/dpl/img/disease.gif" width="202" height="16" style="margin-right:15px;" alt="법정전염병 색상표"></td><br>
+                </tr>
+            </table>
+
+            <!-- 시군구 조회 가능하게 변경 
+            변경 : 염용선 
+            요구자:사용자 요구사항 20131024 -->
+            <!-- 2017.12.07 양광표 조회기간에 질병 : 낭충봉아부패병(0296), 축종 : 벌(418600) 추가 및 2017.09.22자료부터 조회하도록 처리 -->
+            <table width="790px;" border="0" cellspacing="0" cellpadding="0" style="margin-top:0px; margin-right:0px; margin-bottom:10px; margin-left:0px;">
+                <tr>
+                    <td width="10"><img src="/images/dpl/img/search_bg_left_65.gif" width="10" alt="검색BG_left"></td>
+                    <td align="left" valign="middle" style="background-image: url('/images/dpl/img/search_bg_midd_65.gif');" >
+                        <table border="0" cellspacing="0" cellpadding="0" style="margin-top:0px; margin-right:0px; margin-bottom:0px; margin-left:10px;">
+                            <tr>
+                                <td height="22" class="search"><img src="/images/dpl/img/ico_text_dot01.gif" width="14" height="9" alt="dot아이콘">조회기간</td>
+                                <td width="5">&nbsp;</td>                        
+                                <td><label><input type="radio" name="turmGubun" id="turmGubun1" value="01" checked="checked" >진단일</label></td>
+                                <td width="10"></td>
+                                <td><label><input type="radio" name="turmGubun" id="turmGubun2" value="02"  >발생일</label></td>
+                                <td width="10"></td>                            
+                                <td><input name="occrFromDt" id="occrFromDtId" type="text" class="input" value="2025-11-26" size="10" onFocus="onFocusFormatDate(this)" onBlur="onBlurFormatDate(this)" alt="검색창" title="검색창"/></td>
+                                <td width="2">&nbsp;</td>
+                                <td width="10" align="center">-</td>
+                                <td><input name="occrToDt" id="occrToDtId" type="text" class="input" value="2026-11-26" size="10" onFocus="onFocusFormatDate(this)" onBlur="onBlurFormatDate(this)" alt="검색창" title="검색창"/></td>
+                                <td width="2">&nbsp;</td>
+                                <td width="15">&nbsp;</td>
+                                <td class="search">&nbsp;&nbsp;&nbsp;<img src="/images/dpl/img/ico_text_dot01.gif" width="14" height="9" alt="dot아이콘">질병명</td>
+                                <td width="5">&nbsp;</td>
+                                <td><label>
+                                    <select name="dissCl" id="dissCl" class="input" >
+                                    <option value="">전체</option>
+                                    <option value="0007" >가금티푸스</option>
+                                    <option value="0099" >결핵병</option>
+                                    <option value="0111" >고병원성 조류인플루엔자</option>
+                                    <option value="0191" >구제역</option>
+                                    <option value="0333" >뉴캣슬병</option>
+                                    <option value="0406" >돼지생식기호흡기증후군</option>
+                                    <option value="0412" >돼지열병</option>
+                                    <option value="0418" >돼지오제스키병</option>
+                                    <option value="0504" >사슴만성소모성질병</option>
+                                    <option value="0683" >브루셀라병</option>
+                                    <option value="1442" >추백리</option>
+                                    <option value="0296" >낭충봉아부패병</option>
+                                    <option value="1003" >아프리카돼지열병</option>
+                                    <option value="0446" >럼피스킨</option>
+                                    </select>
+                                    </label>
+                                </td>
+                            </tr>
+                        </table>
+                        <table border="0" cellspacing="0" cellpadding="0"  style="margin-top:0px; margin-right:0px; margin-bottom:0px; margin-left:10px;">
+                            <tr>
+                                <td  class="search"><img src="/images/dpl/img/ico_text_dot01.gif" width="14" height="9" alt="dot아이콘">지역선택</td>
+                                <td width="5">&nbsp;</td>
+                                <td>
+                                    <div id="ajaxLegaldong">
+                                    <label>
+                                    <select name="ctprvn" id="ctprvn" class="input"  style="width:100px;" onchange="ajaxLegaldong('ctprvn');">
+                                    
+                                    <option value=" " >전체</option>
+                                    
+                                    <option value="11" >서울특별시</option>
+                                    
+                                    <option value="26" >부산광역시</option>
+                                    
+                                    <option value="27" >대구광역시</option>
+                                    
+                                    <option value="28" >인천광역시</option>
+                                    
+                                    <option value="30" >대전광역시</option>
+                                    
+                                    <option value="31" >울산광역시</option>
+                                    
+                                    <option value="36" >세종특별자치시</option>
+                                    
+                                    <option value="41" >경기도</option>
+                                    
+                                    <option value="51" >강원특별자치도</option>
+                                    
+                                    <option value="43" >충청북도</option>
+                                    
+                                    <option value="44" >충청남도</option>
+                                    
+                                    <option value="52" >전북특별자치도</option>
+                                    
+                                    <option value="12" >전남광주통합특별시</option>
+                                    
+                                    <option value="47" >경상북도</option>
+                                    
+                                    <option value="48" >경상남도</option>
+                                    
+                                    <option value="50" >제주특별자치도</option>
+                                    
+                                    </select>
+                                    <select name="signgu" id="signgu" class="input"  style="width:100px;" onchange="ajaxLegaldong('signgu');">
+                                    
+                                    <option value=" " >전체</option>
+                                    
+                                    </select>
+                                    <!-- 
+                                    <select name="emd" id="emd" class="input" id="select" style="width:100px;"> 
+                                    
+                                    <option value=" " >전체</option>
+                                    
+                                    </select>
+                                    -->
+                                    </label>
+                                    </div>
+                                </td>
+                                <td width="5">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td height="22"  class="search"><img src="/images/dpl/img/ico_text_dot01.gif" width="14" height="9" alt="dot아이콘">축&nbsp;&nbsp;&nbsp;종</td>
+                                <td width="5">&nbsp;</td>
+                                <td><label>
+                                    <select name="lstkspCl" id="lstkspCl" class="input"  >
+                                    <option value="">전 체</option>
+                                    <option value="4120" >소</option>
+                                    <option value="4141" >산양</option>
+                                    <option value="4142" >면양</option>
+                                    <option value="4130" >돼지</option>                
+                                    <option value="4150" >닭</option>
+                                    <option value="4184" >사슴</option>                
+                                    <option value="4162" >오리</option>
+                                    <option value="4163" >거위</option>
+                                    <option value="4161" >칠면조</option>
+                                    <option value="4164" >메추리</option>
+                                    <option value="4186" >벌</option>
+                                    <option value="4143" >염소</option>
+                                    <option value="4169" >기러기</option>
+                                    <option value="4165" >관상조류</option>
+                                    </select>
+                                </label></td>
+                                <td width="2">&nbsp;</td>
+                                <td  class="search"><img src="/images/dpl/img/ico_text_dot01.gif" width="14" height="9" alt="dot아이콘">법정전염병</td>
+                                <td width="5">&nbsp;</td>
+                                <td><label>
+                                    <select name="legalIctsdGradSe" id="legalIctsdGradSe" class="input" >
+                                    <option value="">전체</option>
+                                    <option value="1" >1종</option>
+                                    <option value="2" >2종</option>
+                                    <option value="3" >3종</option>
+                                    </select>
+                                </label></td>
+                            </tr>
+                        </table>
+                    </td>
+                    <td width="70" align="left" style="background-image: url('/images/dpl/img/search_bg_midd_65.gif');" >
+                        <a href="javascript:fn_select_occrList();"><img id="btnSearch" src="/images/dpl/img/btn_search2.gif" width="62" height="23" alt="조회버튼"></a>
+                    </td> 
+                    <td width="10"><img src="/images/dpl/img/search_bg_right_65.gif" width="10" alt="검색BG_right"></td>
+                </tr>
+            </table>   
+            
+            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td style="padding-bottom:6px"><table width="790px;" border="0" cellspacing="0" cellpadding="0" style="height: 35px;">
+                        <tr>
+                            <td><table width="100%" border="0" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td width="13%" align="center" class="list_title">가축전염병명</td>
+                                    <td width="13%" align="center" class="list_title">농장명<br>(농장주)</td>
+                                    <td width="17%" align="center" class="list_title">농장소재지</td>
+                                    <td width="13%" align="center" class="list_title">발생일자<br>(진단일)</td>
+                                    <td width="8%" align="center" class="list_title">축종<br>(품종)</td>
+                                    <td width="8%" align="center" class="list_title">발생두수<br>(마리)</td>
+                                    <td width="16%" align="center" class="list_title">진단기관</td>
+                                    <td width="12%" align="center" class="list_title">종식일<!-- <br>(이동제한해제일) --></td>
+                                </tr>
+                            </table></td>
+                        </tr>
+                    </table></td>
+                </tr>
+                <tr>
+                    <td class="list_text"><table width="100%" border="0" cellspacing="0" cellpadding="0">
+                        
+                        
+                        <tr 
+                        style="background-color: #ffff80;"
+                        
+
+                        onmouseover='this.className=&quot;blueover&quot;'  onmouseout='this.className=&quot;&quot;'
+                        >
+                            <td width="13%" align="center"   class="list_g_line">럼피스킨병</td>
+                            <td width="13%" align="center"   class="list_g_line">
+                                
+                                
+                                .
+                                
+                                
+                                
+                            </td>
+                            <td width="17%" align="left" class="list_g_line">충청남도 홍성군 갈산면 오두리</td>
+                            <td width="13%" align="center" class="list_g_line">4026-10-04(2026-10-04)</td>
+                            <td width="8%" align="center"  class="list_g_line">소-한우</td>
+                            <td width="8%"  align="center" class="list_g_line1">3</td>
+                            <td width="16%" align="left" class="list_g_line">충남 동물위생시험소</td>
+                            <td width="12%" align="center" class="list_g_line">
+                                
+                                
+                                
+                                &nbsp;
+                                
+                                
+                            </td>
+                        </tr>
+                        
+                        <tr 
+                        style="background-color: #ffff80;"
+                        
+
+                        onmouseover='this.className=&quot;blueover&quot;'  onmouseout='this.className=&quot;&quot;'
+                        >
+                            <td width="13%" align="center"   class="list_g_line">결핵병</td>
+                            <td width="13%" align="center"   class="list_g_line">
+                                
+                                
+                                김oooo장
+                                
+                                
+                                
+                            </td>
+                            <td width="17%" align="left" class="list_g_line">경상북도 청도군 화양읍 진라리</td>
+                            <td width="13%" align="center" class="list_g_line">2026-11-24(2026-11-24)</td>
+                            <td width="8%" align="center"  class="list_g_line">소-한우</td>
+                            <td width="8%"  align="center" class="list_g_line1">1</td>
+                            <td width="16%" align="left" class="list_g_line">경북 동부지소</td>
+                            <td width="12%" align="center" class="list_g_line">
+                                
+                                
+                                
+                                &nbsp;
+                                
+                                
+                            </td>
+                        </tr>
+                        
+                        <tr 
+                        style="background-color: #ffff80;"
+                        
+
+                        onmouseover='this.className=&quot;blueover&quot;'  onmouseout='this.className=&quot;&quot;'
+                        >
+                            <td width="13%" align="center"   class="list_g_line">결핵병</td>
+                            <td width="13%" align="center"   class="list_g_line">
+                                
+                                
+                                신o성
+                                
+                                
+                                
+                            </td>
+                            <td width="17%" align="left" class="list_g_line">경상남도 김해시 한림면 신천리</td>
+                            <td width="13%" align="center" class="list_g_line">2026-11-24(2026-11-24)</td>
+                            <td width="8%" align="center"  class="list_g_line">소-한우</td>
+                            <td width="8%"  align="center" class="list_g_line1">1</td>
+                            <td width="16%" align="left" class="list_g_line">경남 중부지소</td>
+                            <td width="12%" align="center" class="list_g_line">
+                                
+                                
+                                
+                                &nbsp;
+                                
+                                
+                            </td>
+                        </tr>
+                        
+                        <tr 
+                        style="background-color: #ffff80;"
+                        
+
+                        onmouseover='this.className=&quot;blueover&quot;'  onmouseout='this.className=&quot;&quot;'
+                        >
+                            <td width="13%" align="center"   class="list_g_line">럼피스킨병</td>
+                            <td width="13%" align="center"   class="list_g_line">
+                                
+                                
+                                참oooooo장
+                                
+                                
+                                
+                            </td>
+                            <td width="17%" align="left" class="list_g_line">경기도 화성시 만세구 장안면 독정리</td>
+                            <td width="13%" align="center" class="list_g_line">2026-11-20(2026-11-23)</td>
+                            <td width="8%" align="center"  class="list_g_line">소-한우</td>
+                            <td width="8%"  align="center" class="list_g_line1">2</td>
+                            <td width="16%" align="left" class="list_g_line">경기도 동물위생시험소</td>
+                            <td width="12%" align="center" class="list_g_line">
+                                
+                                
+                                
+                                &nbsp;
+                                
+                                
+                            </td>
+                        </tr>
+                        
+                        <tr 
+                        style="background-color: #ffff80;"
+                        
+
+                        onmouseover='this.className=&quot;blueover&quot;'  onmouseout='this.className=&quot;&quot;'
+                        >
+                            <td width="13%" align="center"   class="list_g_line">럼피스킨병</td>
+                            <td width="13%" align="center"   class="list_g_line">
+                                
+                                
+                                -
+                                
+                                
+                                
+                            </td>
+                            <td width="17%" align="left" class="list_g_line">전남광주통합특별시 장흥군 회진면 회진리</td>
+                            <td width="13%" align="center" class="list_g_line">2026-11-20(2026-11-20)</td>
+                            <td width="8%" align="center"  class="list_g_line">소-한우</td>
+                            <td width="8%"  align="center" class="list_g_line1">2</td>
+                            <td width="16%" align="left" class="list_g_line">동물위생시험소</td>
+                            <td width="12%" align="center" class="list_g_line">
+                                
+                                
+                                
+                                &nbsp;
+                                
+                                
+                            </td>
+                        </tr>
+                        
+                        <tr 
+                        style="background-color: #ffff80;"
+                        
+
+                        onmouseover='this.className=&quot;blueover&quot;'  onmouseout='this.className=&quot;&quot;'
+                        >
+                            <td width="13%" align="center"   class="list_g_line">럼피스킨병</td>
+                            <td width="13%" align="center"   class="list_g_line">
+                                
+                                
+                                변o계
+                                
+                                
+                                
+                            </td>
+                            <td width="17%" align="left" class="list_g_line">전남광주통합특별시 장흥군 용산면 관지리</td>
+                            <td width="13%" align="center" class="list_g_line">2026-11-20(2026-11-20)</td>
+                            <td width="8%" align="center"  class="list_g_line">소-한우</td>
+                            <td width="8%"  align="center" class="list_g_line1">1</td>
+                            <td width="16%" align="left" class="list_g_line">동물위생시험소</td>
+                            <td width="12%" align="center" class="list_g_line">
+                                
+                                
+                                
+                                &nbsp;
+                                
+                                
+                            </td>
+                        </tr>
+                        
+                        <tr 
+                        style="background-color: #ffff80;"
+                        
+
+                        onmouseover='this.className=&quot;blueover&quot;'  onmouseout='this.className=&quot;&quot;'
+                        >
+                            <td width="13%" align="center"   class="list_g_line">럼피스킨병</td>
+                            <td width="13%" align="center"   class="list_g_line">
+                                
+                                
+                                시oo장
+                                
+                                
+                                
+                            </td>
+                            <td width="17%" align="left" class="list_g_line">경상남도 김해시 한림면 시산리</td>
+                            <td width="13%" align="center" class="list_g_line">2026-11-20(2026-11-20)</td>
+                            <td width="8%" align="center"  class="list_g_line">소-한우</td>
+                            <td width="8%"  align="center" class="list_g_line1">7</td>
+                            <td width="16%" align="left" class="list_g_line">경남 중부지소</td>
+                            <td width="12%" align="center" class="list_g_line">
+                                
+                                
+                                
+                                &nbsp;
+                                
+                                
+                            </td>
+                        </tr>
+                        
+                        <tr 
+                        style="background-color: #ffff80;"
+                        
+
+                        onmouseover='this.className=&quot;blueover&quot;'  onmouseout='this.className=&quot;&quot;'
+                        >
+                            <td width="13%" align="center"   class="list_g_line">럼피스킨병</td>
+                            <td width="13%" align="center"   class="list_g_line">
+                                
+                                
+                                기ooo산
+                                
+                                
+                                
+                            </td>
+                            <td width="17%" align="left" class="list_g_line">경상남도 창녕군 창녕읍 탐하리</td>
+                            <td width="13%" align="center" class="list_g_line">2026-11-20(2026-11-19)</td>
+                            <td width="8%" align="center"  class="list_g_line">소-한우</td>
+                            <td width="8%"  align="center" class="list_g_line1">14</td>
+                            <td width="16%" align="left" class="list_g_line">경남 동부지소</td>
+                            <td width="12%" align="center" class="list_g_line">
+                                
+                                
+                                
+                                &nbsp;
+                                
+                                
+                            </td>
+                        </tr>
+                        
+                        <tr 
+                        style="background-color: #ffff80;"
+                        
+
+                        onmouseover='this.className=&quot;blueover&quot;'  onmouseout='this.className=&quot;&quot;'
+                        >
+                            <td width="13%" align="center"   class="list_g_line">럼피스킨병</td>
+                            <td width="13%" align="center"   class="list_g_line">
+                                
+                                
+                                건oo장
+                                
+                                
+                                
+                            </td>
+                            <td width="17%" align="left" class="list_g_line">경상남도 창녕군 대합면 대곡리</td>
+                            <td width="13%" align="center" class="list_g_line">2026-11-20(2026-11-19)</td>
+                            <td width="8%" align="center"  class="list_g_line">소-한우</td>
+                            <td width="8%"  align="center" class="list_g_line1">11</td>
+                            <td width="16%" align="left" class="list_g_line">경남 동부지소</td>
+                            <td width="12%" align="center" class="list_g_line">
+                                
+                                
+                                
+                                &nbsp;
+                                
+                                
+                            </td>
+                        </tr>
+                        
+                        <tr 
+                        style="background-color: #ffff80;"
+                        
+
+                        onmouseover='this.className=&quot;blueover&quot;'  onmouseout='this.className=&quot;&quot;'
+                        >
+                            <td width="13%" align="center"   class="list_g_line">럼피스킨병</td>
+                            <td width="13%" align="center"   class="list_g_line">
+                                
+                                
+                                박ooo2
+                                
+                                
+                                
+                            </td>
+                            <td width="17%" align="left" class="list_g_line">경기도 시흥시 과림동</td>
+                            <td width="13%" align="center" class="list_g_line">2026-11-19(2026-11-20)</td>
+                            <td width="8%" align="center"  class="list_g_line">소-한우</td>
+                            <td width="8%"  align="center" class="list_g_line1">6</td>
+                            <td width="16%" align="left" class="list_g_line">경기도 동물위생시험소</td>
+                            <td width="12%" align="center" class="list_g_line">
+                                
+                                
+                                
+                                &nbsp;
+                                
+                                
+                            </td>
+                        </tr>
+                        
+                        
+                        
+                    </table></td>
+                </tr>
+            </table>
+
+            <table width="100%" border="0" cellspacing="0" cellpadding="0" >
+                <tr>
+                    <td height="10" colspan="2" align="center">&nbsp;</td>
+                </tr>
+                <tr>
+                    <td height="30" align="center"><table border="0" cellspacing="0" cellpadding="0" class="page_text">
+                        <tr>
+                            
+                            <td width="15"><a href="#" onclick="fn_page_link(1); return false;"><img src=../../images/dpl/img/page_prev_01.gif border="0" style="vertical-align:middle;" alt="firstPageLabel" /></a>&#160;</td><td width="15"><a href="#" onclick="fn_page_link(1); return false;"><img src=../../images/dpl/img/page_prev.gif border="0" style="vertical-align:middle;" alt="previousPageLabel"/></a>&#160;</td><td style="padding-top:1px;"><strong>1</strong>&#160;</td><td><img src=../../images/dpl/img/page_bar.gif width="1" height="10" style="vertical-align:middle;" alt="firstPageLabel"/>&#160;</td><td style="padding-top:1px;"><a href="#" onclick="fn_page_link(2); return false;">2</a>&#160;</td><td><img src=../../images/dpl/img/page_bar.gif width="1" height="10" style="vertical-align:middle;" alt="currentPageLabel"/>&#160;</td><td style="padding-top:1px;"><a href="#" onclick="fn_page_link(3); return false;">3</a>&#160;</td><td><img src=../../images/dpl/img/page_bar.gif width="1" height="10" style="vertical-align:middle;" alt="currentPageLabel"/>&#160;</td><td style="padding-top:1px;"><a href="#" onclick="fn_page_link(4); return false;">4</a>&#160;</td><td><img src=../../images/dpl/img/page_bar.gif width="1" height="10" style="vertical-align:middle;" alt="currentPageLabel"/>&#160;</td><td style="padding-top:1px;"><a href="#" onclick="fn_page_link(5); return false;">5</a>&#160;</td><td><img src=../../images/dpl/img/page_bar.gif width="1" height="10" style="vertical-align:middle;" alt="currentPageLabel"/>&#160;</td><td style="padding-top:1px;"><a href="#" onclick="fn_page_link(6); return false;">6</a>&#160;</td><td><img src=../../images/dpl/img/page_bar.gif width="1" height="10" style="vertical-align:middle;" alt="currentPageLabel"/>&#160;</td><td style="padding-top:1px;"><a href="#" onclick="fn_page_link(7); return false;">7</a>&#160;</td><td><img src=../../images/dpl/img/page_bar.gif width="1" height="10" style="vertical-align:middle;" alt="currentPageLabel"/>&#160;</td><td style="padding-top:1px;"><a href="#" onclick="fn_page_link(8); return false;">8</a>&#160;</td><td><img src=../../images/dpl/img/page_bar.gif width="1" height="10" style="vertical-align:middle;" alt="currentPageLabel"/>&#160;</td><td style="padding-top:1px;"><a href="#" onclick="fn_page_link(9); return false;">9</a>&#160;</td><td><img src=../../images/dpl/img/page_bar.gif width="1" height="10" style="vertical-align:middle;" alt="currentPageLabel"/>&#160;</td><td style="padding-top:1px;"><a href="#" onclick="fn_page_link(10); return false;">10</a>&#160;</td><td><img src=../../images/dpl/img/page_bar.gif width="1" height="10" style="vertical-align:middle;" alt="currentPageLabel"/>&#160;</td><td width="15"><a href="#" onclick="fn_page_link(11); return false;"><img src=../../images/dpl/img/page_next.gif border="0" style="vertical-align:middle;" alt="nextPageLabel"/></a>&#160;</td><td width="15"><a href="#" onclick="fn_page_link(107); return false;"><img src=../../images/dpl/img/page_next_01.gif border="0" style="vertical-align:middle;" alt="lastPageLabel"/></a>&#160;</td>
+
+                            
+                        </tr>
+                    </table></td>
+                </tr>
+                <tr>
+                    <td height="30" align="right"><table border="0" cellspacing="0" cellpadding="0">
+                        <tr>
+                            <td>
+                                
+                                전체 : 1065건(1쪽/107쪽)
+                                
+                                
+                            </td>
+                        </tr>
+                    </table></td>
+                </tr>
+            </table>
+            </form>
+
+        </div>
+        <!--      기존 콘텐츠 테이블이 들어가는 부분 끝     -->       
+    </div>
+    <!-- //contents end -->
+</div>
+<!-- e: sub_contents -->
+<iframe id="rexpertView" style="display:none;"></iframe>
+<!-- s: footer -->
+
+    
+<footer>
+	<div class="foot_wrap">
+	    <span class="foot_logo"><img src="/images/dpl/img2018/bottom_logo.png" alt="국가가축방역통합시스템"></span>
+	     <p class="policy">
+	         
+	         
+	         <a class="foot_text_01" href="https://www.apqa.go.kr/guide/privacy/qia_privacy_2026_2.jsp" target="_blank">개인정보처리방침</a>
+	         <em>|</em>
+	         <a href="/home/guide/guide_m1_03.do" onclick="location.href='/home/guide/guide_m1_03.do'; return false"  target="_blank">이메일무단수집거부</a>
+	         
+	     </p>
+	     <address>
+	         <span class="addr"><span class="com_name">(39660) 경상북도 김천시 혁신8로 177 (율곡동 960)</span>      |     전화 : (代) 054-912-1000</span>
+	     </address>
+	     <p class="copyright">copyrights ⓒ Animal And Plant quarantine agency. all right reserved.</p>
+	</div>
+</footer>
+
+
+ 
+<!-- e: footer -->
+
+<script type="text/javascript">
+    $(document).ready(function() {
+    //달력
+    drawCalendar();
+    });
+
+    $("#lstkspClId").val("");
+    $(".list_g_line1").prettynumber();
+</script>
+
+</body>
+</html>

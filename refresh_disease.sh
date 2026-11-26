@@ -18,6 +18,9 @@ log "시작"
 git pull --rebase --autostash -q >>"$LOG" 2>&1 || { log "pull 실패 — 중단"; exit 1; }
 cp disease_status.json /tmp/disease_status.bak
 
+# 최근 발생(recent)은 KAHIS 전 쪽을 스크립트가 직접 받아 묶는다(claude는 첫 쪽만 읽어 누락했음)
+python3 fetch_kahis.py >>"$LOG" 2>&1 || log "KAHIS 수집 실패 — recent 는 이전 값 유지"
+
 timeout 1200 claude -p "$(cat disease_refresh_prompt.md)" \
   --permission-mode acceptEdits \
   --allowedTools "Read,Write,Edit,WebFetch,WebSearch,Bash(python3 *),Bash(curl *),Bash(grep *),Bash(sed *)" \
