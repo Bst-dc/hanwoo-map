@@ -836,7 +836,7 @@ function drawDots() {
     tail = `${DIS[flt][0]} 발생 ${view.level === 2 ? '읍면동' : '시군'} ${targets.length}곳 · 점에 마우스를 올리면 내용이 보입니다`;
   }
   note.innerHTML = (used.length > 1 ? `<button type="button" data-k="all" aria-pressed="${flt === 'all'}">전체</button>` : '')
-    + used.map(k => `<button type="button" data-k="${k}" style="--c:${DIS[k][1]}" aria-pressed="${flt === k}"><i></i>${DIS[k][0]}</button>`).join('') + `<span>${tail}</span>`;
+    + used.map(k => `<button type="button" data-k="${k}" style="--c:${DIS[k][1]}" aria-pressed="${flt === k}"><i></i>${DIS[k][0]}</button>`).join('');
   note.querySelectorAll('button').forEach(b => { b.onclick = () => { dotFilter = b.dataset.k; drawDots(); }; });
   const k = Math.min(svg.clientWidth / box.w, svg.clientHeight / box.h) || 1, r = 8 / k;
   targets.forEach(({el: area, label, items}) => {
