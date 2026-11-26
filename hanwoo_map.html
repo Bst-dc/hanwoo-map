@@ -98,6 +98,10 @@ svg#map .odot .ring{fill:var(--c);transform-box:fill-box;transform-origin:center
 .dotnote{display:flex;align-items:center;flex-wrap:wrap;gap:4px 12px;margin-top:8px;font-size:.78rem;color:var(--muted)}
 .dotnote span{display:inline-flex;align-items:center;gap:5px}
 .dotnote i{width:10px;height:10px;border-radius:50%;background:var(--c);flex:none;box-shadow:0 0 0 1.5px #fff,0 0 0 2.5px rgba(31,42,28,.25)}
+.dotnote button{display:inline-flex;align-items:center;gap:5px;font:inherit;color:inherit;background:transparent;border:1px solid var(--line);border-radius:999px;padding:2px 10px;cursor:pointer}
+.dotnote button:hover{background:rgba(0,0,0,.05)}
+.dotnote button[aria-pressed="true"]{color:#1f2a1c;font-weight:700;border-color:var(--c,#555);background:rgba(0,0,0,.06)}
+.dotnote button:focus-visible{outline:2px solid #6b4fbb;outline-offset:2px}
 svg#map text.sidolbl{font-weight:800;letter-spacing:-.02em}
 svg#map text{pointer-events:none;text-anchor:middle;dominant-baseline:central;fill:var(--ink);stroke:var(--panel);stroke-linejoin:round;paint-order:stroke;font-weight:700}
 .legend{margin-top:12px;font-size:.78rem;color:var(--muted)}
@@ -803,6 +807,7 @@ function innerPoint(el) {                        // 경계 상자 중심이 지�
   }
   return best || [cx, cy];
 }
+let dotFilter = 'all';                           // 지도 점 보기: 'all' 또는 질병 키(fmd·ai·asf·lsd·tb·etc)
 function drawDots() {
   const g = $('dots'), note = $('dotnote'); g.innerHTML = '';
   let targets = [], tail = '';
@@ -825,7 +830,14 @@ function drawDots() {
   note.hidden = !targets.length;
   if (!targets.length) return;
   const used = [...new Set(targets.flatMap(s => s.items.map(i => i.k)))].sort((x, y) => Object.keys(DIS).indexOf(x) - Object.keys(DIS).indexOf(y));
-  note.innerHTML = used.map(k => `<span style="--c:${DIS[k][1]}"><i></i>${DIS[k][0]}</span>`).join('') + `<span>${tail}</span>`;
+  const flt = used.includes(dotFilter) ? dotFilter : 'all';       // 고른 질병이 이 화면에 없으면 전체로
+  if (flt !== 'all') {
+    targets = targets.map(t => ({...t, items: t.items.filter(i => i.k === flt)})).filter(t => t.items.length);
+    tail = `${DIS[flt][0]} 발생 ${view.level === 2 ? '읍면동' : '시군'} ${targets.length}곳 · 점에 마우스를 올리면 내용이 보입니다`;
+  }
+  note.innerHTML = (used.length > 1 ? `<button type="button" data-k="all" aria-pressed="${flt === 'all'}">전체</button>` : '')
+    + used.map(k => `<button type="button" data-k="${k}" style="--c:${DIS[k][1]}" aria-pressed="${flt === k}"><i></i>${DIS[k][0]}</button>`).join('') + `<span>${tail}</span>`;
+  note.querySelectorAll('button').forEach(b => { b.onclick = () => { dotFilter = b.dataset.k; drawDots(); }; });
   const k = Math.min(svg.clientWidth / box.w, svg.clientHeight / box.h) || 1, r = 8 / k;
   targets.forEach(({el: area, label, items}) => {
     const [x0, y00] = innerPoint(area), kinds = [...new Set(items.map(i => i.k))];
